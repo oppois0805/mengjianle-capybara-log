@@ -1,11 +1,25 @@
 import "zone.js";
 import "@angular/compiler";
 import { CommonModule } from "@angular/common";
-import { ChangeDetectorRef, Component, inject } from "@angular/core";
+import { ChangeDetectorRef, Component, OnDestroy, inject } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";
+import { BarChart, LineChart } from "echarts/charts";
+import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
+import * as echarts from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
 
-type EntryTab = "injection" | "purchase";
+echarts.use([
+  BarChart,
+  LineChart,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+  CanvasRenderer,
+]);
+
+type EntryTab = "injection" | "purchase" | "weight";
 type ViewTab = "home" | "entry" | "history";
+type ChartRange = "week" | "month" | "year";
 type LocationKey = "upper_left" | "upper_right" | "lower_left" | "lower_right";
 type ProfileKey = "wenwen" | "haohao";
 
@@ -29,18 +43,30 @@ interface InjectionRecord {
   note: string;
 }
 
+interface WeightRecord {
+  id: number;
+  profile: ProfileKey;
+  recordDate: string;
+  recordTime: string;
+  weightKg: number;
+  note: string;
+}
+
 interface TrackerData {
   summary: {
     totalSpent: number;
     totalPurchaseCount: number;
     purchaseRecordsCount: number;
     injectionRecordsCount: number;
+    weightRecordsCount: number;
+    latestWeight: WeightRecord | null;
     lastInjection: InjectionRecord | null;
     lastLocation: LocationKey | null;
     nextInjectionDate: string | null;
   };
   purchases: PurchaseRecord[];
   injections: InjectionRecord[];
+  weights: WeightRecord[];
 }
 
 const locationLabels: Record<LocationKey, string> = {
@@ -78,12 +104,15 @@ const emptyData: TrackerData = {
     totalPurchaseCount: 0,
     purchaseRecordsCount: 0,
     injectionRecordsCount: 0,
+    weightRecordsCount: 0,
+    latestWeight: null,
     lastInjection: null,
     lastLocation: null,
     nextInjectionDate: null,
   },
   purchases: [],
   injections: [],
+  weights: [],
 };
 
 function localDate() {
@@ -212,11 +241,44 @@ function addDays(date: string, days: number) {
               <strong>{{ placeLabel(data.summary.lastLocation) }}</strong>
               <small>{{ formatDate(data.summary.lastInjection?.injectionDate) }}</small>
             </article>
+            <article class="stat-item weight-stat">
+              <span>目前體重</span>
+              <strong>{{ data.summary.latestWeight ? formatWeight(data.summary.latestWeight.weightKg) : '尚未記錄' }}</strong>
+              <small>{{ data.summary.latestWeight ? formatDate(data.summary.latestWeight.recordDate) : '新增第一筆體重' }}</small>
+            </article>
             <article class="stat-item">
               <span>總施打次數</span>
               <strong>{{ data.summary.injectionRecordsCount }}</strong>
               <small>筆施打紀錄</small>
             </article>
+          </section>
+
+          <section class="trend-panel section-frame" aria-labelledby="trend-title">
+            <div class="trend-panel-head">
+              <div>
+                <h2 id="trend-title">體重與施打趨勢</h2>
+                <p>{{ chartRangeCaption }}</p>
+              </div>
+              <div class="chart-range-control" aria-label="圖表期間">
+                <button type="button" [class.is-active]="chartRange === 'week'" [attr.aria-pressed]="chartRange === 'week'" (click)="setChartRange('week')">週</button>
+                <button type="button" [class.is-active]="chartRange === 'month'" [attr.aria-pressed]="chartRange === 'month'" (click)="setChartRange('month')">月</button>
+                <button type="button" [class.is-active]="chartRange === 'year'" [attr.aria-pressed]="chartRange === 'year'" (click)="setChartRange('year')">年</button>
+              </div>
+            </div>
+            <div class="trend-legend" aria-hidden="true">
+              <span><i class="weight-line-key"></i>體重 kg</span>
+              <span><i class="injection-bar-key"></i>施打時間</span>
+            </div>
+            <div
+              id="health-trend-chart"
+              class="health-trend-chart"
+              role="img"
+              [attr.aria-label]="chartAccessibleSummary"
+            ></div>
+            <div class="chart-empty" *ngIf="!hasChartData">
+              <strong>還沒有這段期間的趨勢資料</strong>
+              <p>新增體重或施打紀錄後，折線與直條會顯示在這裡。</p>
+            </div>
           </section>
 
           <div class="home-grid">
@@ -294,17 +356,20 @@ function addDays(date: string, days: number) {
           <div class="page-head">
             <button class="entry-close" type="button" aria-label="返回首頁" (click)="setView('home')">‹</button>
             <div>
-              <h1>{{ activeEntry === 'injection' ? '記錄施打' : '記錄購買' }}</h1>
+              <h1>{{ entryTitle }}</h1>
             </div>
           </div>
 
           <section class="record-sheet">
-            <div class="record-tabs" aria-label="紀錄類型">
+            <div class="record-tabs is-three" aria-label="紀錄類型">
               <button type="button" [class.is-active]="activeEntry === 'injection'" (click)="switchEntry('injection')">
                 施打紀錄
               </button>
               <button type="button" [class.is-active]="activeEntry === 'purchase'" (click)="switchEntry('purchase')">
                 購買紀錄
+              </button>
+              <button type="button" [class.is-active]="activeEntry === 'weight'" (click)="switchEntry('weight')">
+                體重紀錄
               </button>
             </div>
 
@@ -438,6 +503,53 @@ function addDays(date: string, days: number) {
                 {{ saving === 'purchase' ? '儲存中...' : '確認儲存' }}
               </button>
             </form>
+
+            <form class="record-form weight-form" *ngIf="activeEntry === 'weight'" (submit)="saveWeight($event)">
+              <div class="step-head">
+                <h2>記錄體重</h2>
+              </div>
+
+              <div class="field-row date-time-row">
+                <label>
+                  <span>測量日期</span>
+                  <span class="native-picker">
+                    <span class="native-picker-value" aria-hidden="true">{{ pickerDate(weight.recordDate) }}</span>
+                    <span class="native-picker-icon is-date" aria-hidden="true"></span>
+                    <input class="native-picker-input" type="date" [value]="weight.recordDate" (input)="setWeight('recordDate', valueFrom($event))" required />
+                  </span>
+                </label>
+                <label>
+                  <span>測量時間</span>
+                  <span class="native-picker">
+                    <span class="native-picker-value" aria-hidden="true">{{ weight.recordTime || '--:--' }}</span>
+                    <span class="native-picker-icon is-time" aria-hidden="true"></span>
+                    <input class="native-picker-input" type="time" [value]="weight.recordTime" (input)="setWeight('recordTime', valueFrom($event))" />
+                  </span>
+                </label>
+              </div>
+
+              <label>
+                <span>體重</span>
+                <span class="weight-input-wrap">
+                  <input type="number" min="20" max="500" step="0.1" inputmode="decimal" [value]="weight.weightKg" (input)="setWeight('weightKg', valueFrom($event))" placeholder="例如：76.5" required />
+                  <span aria-hidden="true">kg</span>
+                </span>
+              </label>
+
+              <div class="previous-weight" *ngIf="data.summary.latestWeight">
+                <span>上次紀錄 {{ formatWeight(data.summary.latestWeight.weightKg) }}</span>
+                <strong *ngIf="weightDifference !== null">{{ weightDifferenceLabel }}</strong>
+              </div>
+
+              <label>
+                <span>備註（選填）</span>
+                <textarea rows="3" maxlength="100" [value]="weight.note" (input)="setWeight('note', valueFrom($event))" placeholder="例如：空腹、飯後或身體狀況"></textarea>
+              </label>
+
+              <button class="coral-action full-action" type="submit" [disabled]="saving === 'weight'">
+                {{ saving === 'weight' ? '儲存中...' : '確認儲存' }}
+              </button>
+            </form>
           </section>
         </section>
 
@@ -452,9 +564,10 @@ function addDays(date: string, days: number) {
           </div>
 
           <div class="history-toolbar">
-            <div class="record-tabs history-tabs" aria-label="歷史紀錄類型">
+            <div class="record-tabs history-tabs is-three" aria-label="歷史紀錄類型">
               <button type="button" [class.is-active]="historyTab === 'injection'" (click)="historyTab = 'injection'">施打</button>
               <button type="button" [class.is-active]="historyTab === 'purchase'" (click)="historyTab = 'purchase'">購買</button>
+              <button type="button" [class.is-active]="historyTab === 'weight'" (click)="historyTab = 'weight'">體重</button>
             </div>
             <div class="filters">
               <label *ngIf="historyTab === 'injection'">
@@ -519,6 +632,24 @@ function addDays(date: string, days: number) {
               </tbody>
             </table>
           </section>
+
+          <section class="history-table-wrap section-frame" *ngIf="historyTab === 'weight'">
+            <div class="table-title"><h2>體重紀錄</h2><span>{{ filteredWeights.length }} 筆</span></div>
+            <p class="empty-table" *ngIf="!filteredWeights.length">目前沒有符合條件的體重紀錄。</p>
+            <table *ngIf="filteredWeights.length">
+              <thead><tr><th>日期</th><th>時間</th><th>體重</th><th>與前次差異</th><th>備註</th><th><span class="sr-only">操作</span></th></tr></thead>
+              <tbody>
+                <tr *ngFor="let record of filteredWeights">
+                  <td data-label="日期">{{ record.recordDate }}</td>
+                  <td data-label="時間">{{ record.recordTime || '--:--' }}</td>
+                  <td data-label="體重">{{ formatWeight(record.weightKg) }}</td>
+                  <td data-label="與前次差異">{{ historyWeightDifference(record) }}</td>
+                  <td data-label="備註">{{ record.note || '—' }}</td>
+                  <td class="action-cell"><button class="delete-action" type="button" title="刪除" aria-label="刪除體重紀錄" [disabled]="deleting === 'weight-' + record.id" (click)="deleteRecord('weight', record.id)">{{ deleting === 'weight-' + record.id ? '…' : '×' }}</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
         </section>
 
         <p class="medical-note">僅供個人紀錄；施打方式、位置與日期請依醫師或藥師指示。</p>
@@ -538,9 +669,13 @@ function addDays(date: string, days: number) {
     </section>
   `,
 })
-class TrackerAppComponent {
+class TrackerAppComponent implements OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private messageTimer: ReturnType<typeof setTimeout> | null = null;
+  private chartRenderTimer: ReturnType<typeof setTimeout> | null = null;
+  private chart: ReturnType<typeof echarts.init> | null = null;
+  private chartElement: HTMLElement | null = null;
+  private chartResizeObserver: ResizeObserver | null = null;
   readonly localToday = localDate();
   readonly profiles = profileOptions;
   readonly locationOptions = [
@@ -558,6 +693,7 @@ class TrackerAppComponent {
   injectionStep: 1 | 2 = 1;
   filterLocation = "all";
   filterDate = "";
+  chartRange: ChartRange = "week";
   loading = false;
   saving: EntryTab | "" = "";
   deleting = "";
@@ -566,12 +702,19 @@ class TrackerAppComponent {
   messageTone: "success" | "error" = "success";
   purchase = this.newPurchase();
   injection = this.newInjection();
+  weight = this.newWeight();
 
   get currentProfile() {
     return (
       this.profiles.find((profile) => profile.key === this.selectedProfile) ??
       this.profiles[0]
     );
+  }
+
+  get entryTitle() {
+    if (this.activeEntry === "purchase") return "記錄購買";
+    if (this.activeEntry === "weight") return "記錄體重";
+    return "記錄施打";
   }
 
   selectProfile(profile: ProfileKey) {
@@ -583,9 +726,11 @@ class TrackerAppComponent {
     this.injectionStep = 1;
     this.filterLocation = "all";
     this.filterDate = "";
+    this.chartRange = "week";
     this.highlightedInjectionId = null;
     this.purchase = this.newPurchase();
     this.injection = this.newInjection();
+    this.weight = this.newWeight();
     this.message = "";
     window.scrollTo({ top: 0 });
     this.refreshUi();
@@ -593,6 +738,7 @@ class TrackerAppComponent {
   }
 
   showProfilePicker() {
+    this.disposeChart();
     this.selectedProfile = null;
     this.data = emptyData;
     this.loading = false;
@@ -633,6 +779,49 @@ class TrackerAppComponent {
     );
   }
 
+  get filteredWeights() {
+    return this.data.weights.filter(
+      (record) => !this.filterDate || record.recordDate === this.filterDate
+    );
+  }
+
+  get weightDifference() {
+    const latest = this.data.summary.latestWeight;
+    const current = Number(this.weight.weightKg);
+    if (!latest || !Number.isFinite(current) || !this.weight.weightKg) return null;
+    return Math.round((current - latest.weightKg) * 10) / 10;
+  }
+
+  get weightDifferenceLabel() {
+    const difference = this.weightDifference;
+    if (difference === null || difference === 0) return "與上次相同";
+    return `${difference > 0 ? "增加" : "下降"} ${Math.abs(difference).toFixed(1)} kg`;
+  }
+
+  get chartRangeCaption() {
+    if (this.chartRange === "month") return "最近 31 天";
+    if (this.chartRange === "year") return "最近 12 個月";
+    return "最近 7 天";
+  }
+
+  get hasChartData() {
+    const { start, end } = this.chartBounds();
+    return (
+      this.data.weights.some((record) => this.dateInRange(record.recordDate, start, end)) ||
+      this.data.injections.some(
+        (record) =>
+          Boolean(record.injectionTime) &&
+          this.dateInRange(record.injectionDate, start, end)
+      )
+    );
+  }
+
+  get chartAccessibleSummary() {
+    const weightCount = this.chartWeightRows().length;
+    const injectionCount = this.chartInjectionRows().length;
+    return `${this.chartRangeCaption}，${weightCount} 筆體重與 ${injectionCount} 筆有時間的施打紀錄。`;
+  }
+
   valueFrom(event: Event) {
     return (event.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value;
   }
@@ -657,6 +846,19 @@ class TrackerAppComponent {
     return date ? date.replaceAll("-", "/") : "--/--/--";
   }
 
+  formatWeight(value: number) {
+    return `${Number(value).toFixed(1)} kg`;
+  }
+
+  historyWeightDifference(record: WeightRecord) {
+    const index = this.data.weights.findIndex((item) => item.id === record.id);
+    const previous = index >= 0 ? this.data.weights[index + 1] : null;
+    if (!previous) return "—";
+    const difference = Math.round((record.weightKg - previous.weightKg) * 10) / 10;
+    if (difference === 0) return "0.0 kg";
+    return `${difference > 0 ? "+" : ""}${difference.toFixed(1)} kg`;
+  }
+
   currency(value: number) {
     return new Intl.NumberFormat("zh-TW", {
       style: "currency",
@@ -669,6 +871,12 @@ class TrackerAppComponent {
     this.activeView = view;
     this.message = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
+    this.refreshUi();
+  }
+
+  setChartRange(range: ChartRange) {
+    this.chartRange = range;
+    this.refreshUi();
   }
 
   switchEntry(type: EntryTab) {
@@ -722,6 +930,10 @@ class TrackerAppComponent {
     this.injection = next;
   }
 
+  setWeight(field: keyof typeof this.weight, value: string) {
+    this.weight = { ...this.weight, [field]: value };
+  }
+
   async load() {
     const profile = this.selectedProfile;
     if (!profile) return false;
@@ -771,6 +983,21 @@ class TrackerAppComponent {
     if (saved) {
       this.injection = this.newInjection();
       this.injectionStep = 1;
+      this.activeView = "home";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      this.refreshUi();
+    }
+  }
+
+  async saveWeight(event: Event) {
+    event.preventDefault();
+    const saved = await this.save("weight", {
+      type: "weight",
+      ...this.weight,
+      weightKg: Number(this.weight.weightKg),
+    });
+    if (saved) {
+      this.weight = this.newWeight();
       this.activeView = "home";
       window.scrollTo({ top: 0, behavior: "smooth" });
       this.refreshUi();
@@ -848,6 +1075,222 @@ class TrackerAppComponent {
     }
   }
 
+  ngOnDestroy() {
+    if (this.messageTimer) clearTimeout(this.messageTimer);
+    if (this.chartRenderTimer) clearTimeout(this.chartRenderTimer);
+    this.disposeChart();
+  }
+
+  private chartBounds() {
+    const end = new Date(`${this.localToday}T23:59:59`);
+    const start = new Date(`${this.localToday}T00:00:00`);
+    if (this.chartRange === "week") {
+      start.setDate(start.getDate() - 6);
+    } else if (this.chartRange === "month") {
+      start.setDate(start.getDate() - 30);
+    } else {
+      start.setFullYear(start.getFullYear() - 1);
+      start.setDate(start.getDate() + 1);
+    }
+    return { start: start.getTime(), end: end.getTime() };
+  }
+
+  private dateInRange(date: string, start: number, end: number) {
+    const value = new Date(`${date}T12:00:00`).getTime();
+    return Number.isFinite(value) && value >= start && value <= end;
+  }
+
+  private chartWeightRows() {
+    const { start, end } = this.chartBounds();
+    return this.data.weights
+      .filter((record) => this.dateInRange(record.recordDate, start, end))
+      .sort((a, b) =>
+        `${a.recordDate}T${a.recordTime}`.localeCompare(`${b.recordDate}T${b.recordTime}`)
+      );
+  }
+
+  private chartInjectionRows() {
+    const { start, end } = this.chartBounds();
+    return this.data.injections
+      .filter(
+        (record) =>
+          Boolean(record.injectionTime) &&
+          this.dateInRange(record.injectionDate, start, end)
+      )
+      .sort((a, b) =>
+        `${a.injectionDate}T${a.injectionTime}`.localeCompare(
+          `${b.injectionDate}T${b.injectionTime}`
+        )
+      );
+  }
+
+  private timeToHours(time: string) {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours + minutes / 60;
+  }
+
+  private formatChartTime(value: number) {
+    const totalMinutes = Math.round(value * 60);
+    const hours = Math.floor(totalMinutes / 60) % 24;
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  }
+
+  private formatChartDate(value: number) {
+    const date = new Date(value);
+    if (this.chartRange === "year") return `${date.getMonth() + 1}月`;
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  }
+
+  private scheduleChartRender() {
+    if (this.chartRenderTimer) clearTimeout(this.chartRenderTimer);
+    if (!this.selectedProfile || this.activeView !== "home") return;
+    this.chartRenderTimer = setTimeout(() => this.renderHealthChart(), 20);
+  }
+
+  private renderHealthChart() {
+    const element = document.getElementById("health-trend-chart");
+    if (!element || !this.selectedProfile || this.activeView !== "home") return;
+
+    if (this.chartElement !== element) {
+      this.disposeChart();
+      this.chartElement = element;
+      this.chart = echarts.init(element, undefined, { renderer: "canvas" });
+      this.chartResizeObserver = new ResizeObserver(() => this.chart?.resize());
+      this.chartResizeObserver.observe(element);
+    }
+
+    const styles = getComputedStyle(element);
+    const teal = styles.getPropertyValue("--teal").trim() || "#4c918f";
+    const coral = styles.getPropertyValue("--coral").trim() || "#f26d59";
+    const line = styles.getPropertyValue("--line").trim() || "#dedbd4";
+    const muted = styles.getPropertyValue("--muted").trim() || "#716e66";
+    const surface = styles.getPropertyValue("--surface").trim() || "#ffffff";
+    const ink = styles.getPropertyValue("--ink").trim() || "#282722";
+    const { start, end } = this.chartBounds();
+    const weightRows = this.chartWeightRows();
+    const injectionRows = this.chartInjectionRows();
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    this.chart?.setOption(
+      {
+        animation: !reduceMotion,
+        animationDuration: 380,
+        backgroundColor: "transparent",
+        grid: { top: 28, right: 54, bottom: 44, left: 50 },
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: surface,
+          borderColor: line,
+          borderWidth: 1,
+          textStyle: { color: ink, fontSize: 12 },
+          formatter: (params: unknown) => {
+            const items = Array.isArray(params)
+              ? (params as Array<{
+                  axisValue: unknown;
+                  marker: string;
+                  seriesName: string;
+                  value: unknown;
+                }>)
+              : [];
+            if (!items.length) return "";
+            const date = new Date(Number(items[0].axisValue));
+            const heading = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+            const rows = items.map((item) => {
+              const raw = Array.isArray(item.value) ? Number(item.value[1]) : Number(item.value);
+              const value = item.seriesName === "體重"
+                ? `${raw.toFixed(1)} kg`
+                : this.formatChartTime(raw);
+              return `${item.marker}${item.seriesName}：${value}`;
+            });
+            return `<strong>${heading}</strong><br>${rows.join("<br>")}`;
+          },
+        },
+        xAxis: {
+          type: "time",
+          min: start,
+          max: end,
+          boundaryGap: [0.03, 0.03],
+          axisLine: { lineStyle: { color: line } },
+          axisTick: { show: false },
+          splitLine: { show: false },
+          axisLabel: {
+            color: muted,
+            fontSize: 11,
+            hideOverlap: true,
+            formatter: (value: number) => this.formatChartDate(value),
+          },
+        },
+        yAxis: [
+          {
+            type: "value",
+            name: "kg",
+            scale: true,
+            min: (value: { min: number }) => Math.floor(value.min - 1),
+            max: (value: { max: number }) => Math.ceil(value.max + 1),
+            nameTextStyle: { color: muted, fontSize: 11 },
+            axisLabel: { color: muted, fontSize: 11 },
+            axisLine: { show: false },
+            axisTick: { show: false },
+            splitLine: { lineStyle: { color: line } },
+          },
+          {
+            type: "value",
+            name: "施打時間",
+            min: 0,
+            max: 24,
+            interval: 6,
+            nameTextStyle: { color: muted, fontSize: 11 },
+            axisLabel: {
+              color: muted,
+              fontSize: 11,
+              formatter: (value: number) => `${String(value).padStart(2, "0")}:00`,
+            },
+            axisLine: { show: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+          },
+        ],
+        series: [
+          {
+            name: "施打時間",
+            type: "bar",
+            yAxisIndex: 1,
+            barWidth: this.chartRange === "year" ? 4 : this.chartRange === "month" ? 8 : 14,
+            itemStyle: { color: coral, borderRadius: [3, 3, 0, 0], opacity: 0.72 },
+            data: injectionRows.map((record) => [
+              new Date(`${record.injectionDate}T12:00:00`).getTime(),
+              this.timeToHours(record.injectionTime),
+            ]),
+          },
+          {
+            name: "體重",
+            type: "line",
+            yAxisIndex: 0,
+            smooth: 0.25,
+            symbol: "circle",
+            symbolSize: 7,
+            lineStyle: { color: teal, width: 3 },
+            itemStyle: { color: surface, borderColor: teal, borderWidth: 3 },
+            data: weightRows.map((record) => [
+              new Date(`${record.recordDate}T${record.recordTime || "12:00"}:00`).getTime(),
+              record.weightKg,
+            ]),
+          },
+        ],
+      },
+      true
+    );
+  }
+
+  private disposeChart() {
+    this.chartResizeObserver?.disconnect();
+    this.chartResizeObserver = null;
+    this.chart?.dispose();
+    this.chart = null;
+    this.chartElement = null;
+  }
+
   showMessage(message: string, tone: "success" | "error") {
     if (this.messageTimer) clearTimeout(this.messageTimer);
     this.message = message;
@@ -860,7 +1303,10 @@ class TrackerAppComponent {
   }
 
   private refreshUi() {
-    setTimeout(() => this.cdr.detectChanges(), 0);
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      this.scheduleChartRender();
+    }, 0);
   }
 
   private newPurchase() {
@@ -880,6 +1326,15 @@ class TrackerAppComponent {
       injectionTime: currentTime(),
       location: (this?.suggestedLocation || "upper_left") as LocationKey,
       nextInjectionDate: addDays(date, 7),
+      note: "",
+    };
+  }
+
+  private newWeight() {
+    return {
+      recordDate: localDate(),
+      recordTime: currentTime(),
+      weightKg: "",
       note: "",
     };
   }

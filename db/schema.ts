@@ -43,3 +43,23 @@ export const injections = sqliteTable(
     index("idx_injections_location").on(table.location),
   ]
 );
+
+export const weights = sqliteTable(
+  "weights",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    profile: text("profile").notNull().default("wenwen"),
+    recordDate: text("record_date").notNull(),
+    recordTime: text("record_time").notNull().default(""),
+    weightKg: real("weight_kg").notNull(),
+    note: text("note").notNull().default(""),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_weights_record_date").on(table.recordDate),
+    index("idx_weights_profile_record_date").on(
+      table.profile,
+      table.recordDate
+    ),
+  ]
+);

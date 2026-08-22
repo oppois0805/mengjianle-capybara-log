@@ -32,15 +32,17 @@ test("renders the finished tracker shell", async () => {
   assert.match(html, /<title>猛健樂卡皮巴拉紀錄<\/title>/);
   assert.match(html, /<mounjaro-tracker>/);
   assert.match(html, /\/mounjaro-app\.js/);
-  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260822-mobile-picker/);
+  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260822-weight-trends/);
   assert.match(html, /\/og\.png/);
   assert.doesNotMatch(html, /codex-preview|_sites-preview|Starter Project/);
 });
 
 test("includes the Angular client and capybara assets", async () => {
-  const [client, source] = await Promise.all([
+  const [client, source, api, schema] = await Promise.all([
     readFile(new URL("../public/mounjaro-app.js", import.meta.url), "utf8"),
     readFile(new URL("../app/angular/main.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/records/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     access(new URL("../public/capybara-hero.png", import.meta.url)),
     access(new URL("../public/og.png", import.meta.url)),
     access(new URL("../public/capybara-wenwen.png", import.meta.url)),
@@ -58,4 +60,11 @@ test("includes the Angular client and capybara assets", async () => {
   assert.match(source, /profile=\$\{profile\}/);
   assert.match(source, /native-picker-input/);
   assert.match(source, /pickerDate/);
+  assert.match(source, /type EntryTab = "injection" \| "purchase" \| "weight"/);
+  assert.match(source, /health-trend-chart/);
+  assert.match(source, /setChartRange/);
+  assert.match(client, /echarts/);
+  assert.match(api, /type === "weight"/);
+  assert.match(api, /weightRecordsCount/);
+  assert.match(schema, /export const weights = sqliteTable/);
 });

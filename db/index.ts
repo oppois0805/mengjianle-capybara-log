@@ -20,7 +20,7 @@ export function getDb() {
 
 async function ensureProfileColumn(
   d1: ReturnType<typeof getD1>,
-  table: "purchases" | "injections"
+  table: "purchases" | "injections" | "weights"
 ) {
   const columns = await d1
     .prepare(`PRAGMA table_info(${table})`)
@@ -75,10 +75,26 @@ export async function ensureDbSchema() {
           `CREATE INDEX IF NOT EXISTS idx_injections_location
             ON injections (location)`
         ),
+        d1.prepare(
+          `CREATE TABLE IF NOT EXISTS weights (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            profile TEXT NOT NULL DEFAULT 'wenwen',
+            record_date TEXT NOT NULL,
+            record_time TEXT NOT NULL DEFAULT '',
+            weight_kg REAL NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )`
+        ),
+        d1.prepare(
+          `CREATE INDEX IF NOT EXISTS idx_weights_record_date
+            ON weights (record_date)`
+        ),
       ]);
 
       await ensureProfileColumn(d1, "purchases");
       await ensureProfileColumn(d1, "injections");
+      await ensureProfileColumn(d1, "weights");
 
       await d1.batch([
         d1.prepare(
@@ -88,6 +104,10 @@ export async function ensureDbSchema() {
         d1.prepare(
           `CREATE INDEX IF NOT EXISTS idx_injections_profile_injection_date
             ON injections (profile, injection_date)`
+        ),
+        d1.prepare(
+          `CREATE INDEX IF NOT EXISTS idx_weights_profile_record_date
+            ON weights (profile, record_date)`
         ),
         d1.prepare("PRAGMA optimize"),
       ]);

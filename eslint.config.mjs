@@ -11,8 +11,10 @@ const eslintConfig = defineConfig([
   globalIgnores([
     ".next/**",
     "dist/**",
+    "work/**",
     "out/**",
     "build/**",
+    "public/mounjaro-app.js",
     "next-env.d.ts",
   ]),
   eslint.configs.recommended,

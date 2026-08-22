@@ -1209,6 +1209,219 @@ td::before {
   }
 }
 
+/* Weight tracking and health trend */
+.record-tabs.is-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 360px);
+}
+
+.weight-stat {
+  grid-column: 1 / -1;
+}
+
+.weight-stat::after {
+  background: var(--teal-soft);
+  color: var(--teal);
+  content: "kg";
+  font-size: 0.72rem;
+}
+
+.stat-item:last-child::after {
+  background: var(--teal-soft);
+  color: var(--teal);
+  content: "▣";
+}
+
+.trend-panel {
+  position: relative;
+  min-width: 0;
+  margin-top: 12px;
+  padding: 14px 12px 10px;
+}
+
+.trend-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trend-panel-head h2 {
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.trend-panel-head p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.chart-range-control {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border-radius: 7px;
+  background: var(--sage-soft);
+}
+
+.chart-range-control button {
+  min-width: 42px;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.chart-range-control button.is-active {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(64, 53, 48, 0.08);
+}
+
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.trend-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weight-line-key {
+  width: 18px;
+  border-top: 3px solid var(--teal);
+}
+
+.injection-bar-key {
+  width: 8px;
+  height: 14px;
+  border-radius: 2px 2px 0 0;
+  background: var(--coral);
+}
+
+.health-trend-chart {
+  width: 100%;
+  min-width: 0;
+  height: 252px;
+}
+
+.chart-empty {
+  position: absolute;
+  right: 18px;
+  bottom: 38px;
+  left: 18px;
+  display: grid;
+  min-height: 150px;
+  align-content: center;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
+  text-align: center;
+  pointer-events: none;
+}
+
+.chart-empty strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.chart-empty p {
+  margin-top: 5px;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.weight-input-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.weight-input-wrap input {
+  padding-right: 54px;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.weight-input-wrap > span {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.previous-weight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--teal);
+  background: var(--teal-soft);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.previous-weight strong {
+  color: var(--teal-dark);
+  font-size: 0.86rem;
+}
+
+@media (max-width: 360px) {
+  .trend-panel-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .chart-range-control {
+    width: 100%;
+  }
+
+  .record-tabs.is-three button {
+    font-size: 0.78rem;
+  }
+}
+
+@media (min-width: 900px) {
+  .stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .weight-stat {
+    grid-column: auto;
+  }
+
+  .trend-panel {
+    margin-top: 14px;
+    padding: 18px 20px 12px;
+  }
+
+  .health-trend-chart {
+    height: 300px;
+  }
+}
+
 
 /* Profile selection and per-person themes */
 .profile-picker {
@@ -2358,5 +2571,23 @@ tbody tr.is-target-record {
 
   .row-chevron {
     display: none;
+  }
+}
+
+/* Keep the weight summary aligned after the legacy stat-card rules above. */
+.weight-stat::after {
+  background: var(--teal-soft);
+  color: var(--teal);
+  content: "kg";
+  font-size: 0.72rem;
+}
+
+@media (min-width: 900px) {
+  .stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .weight-stat {
+    grid-column: auto;
   }
 }

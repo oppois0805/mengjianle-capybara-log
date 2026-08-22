@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { ensureDbSchema, getDb } from "../../../db";
-import { injections, purchases } from "../../../db/schema";
+import { injections, purchases, weights } from "../../../db/schema";
 
 const locations = new Set([
   "upper_left",
@@ -51,6 +51,13 @@ function toAmount(value: unknown) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : -1;
 }
 
+function toWeight(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 20 && parsed <= 500
+    ? Math.round(parsed * 100) / 100
+    : -1;
+}
+
 function routeError(error: unknown) {
   const message = error instanceof Error ? error.message : "發生未預期的錯誤";
   const detail =
@@ -87,12 +94,24 @@ async function readTrackerData(db: ReturnType<typeof getDb>, profile: string) {
     .orderBy(desc(injections.injectionDate), desc(injections.id))
     .limit(120);
 
+  const weightRows = await db
+    .select()
+    .from(weights)
+    .where(eq(weights.profile, profile))
+    .orderBy(desc(weights.recordDate), desc(weights.recordTime), desc(weights.id))
+    .limit(400);
+
   const [injectionTotals] = await db
     .select({
       injectionRecordsCount: sql<number>`count(*)`,
     })
     .from(injections)
     .where(eq(injections.profile, profile));
+
+  const [weightTotals] = await db
+    .select({ weightRecordsCount: sql<number>`count(*)` })
+    .from(weights)
+    .where(eq(weights.profile, profile));
 
   const lastInjection = injectionRows[0] ?? null;
   const nextInjectionDate =
@@ -105,12 +124,15 @@ async function readTrackerData(db: ReturnType<typeof getDb>, profile: string) {
       totalPurchaseCount: Number(totals?.totalPurchaseCount ?? 0),
       purchaseRecordsCount: Number(totals?.purchaseRecordsCount ?? 0),
       injectionRecordsCount: Number(injectionTotals?.injectionRecordsCount ?? 0),
+      weightRecordsCount: Number(weightTotals?.weightRecordsCount ?? 0),
+      latestWeight: weightRows[0] ?? null,
       lastInjection,
       lastLocation: lastInjection?.location ?? null,
       nextInjectionDate: nextInjectionDate || null,
     },
     purchases: purchaseRows,
     injections: injectionRows,
+    weights: weightRows,
   };
 }
 
@@ -203,6 +225,34 @@ export async function POST(request: Request) {
       );
     }
 
+    if (type === "weight") {
+      const recordDate = toDate(payload.recordDate);
+      const recordTime = toTime(payload.recordTime);
+      const weightKg = toWeight(payload.weightKg);
+
+      if (!recordDate || weightKg < 0) {
+        return Response.json(
+          { error: "請確認測量日期與體重，體重需介於 20 至 500 公斤。" },
+          { status: 400 }
+        );
+      }
+
+      const [record] = await db
+        .insert(weights)
+        .values({
+          profile,
+          recordDate,
+          recordTime,
+          weightKg,
+          note: toText(payload.note),
+        })
+        .returning();
+      return Response.json(
+        { record, data: await readTrackerData(db, profile) },
+        { status: 201, headers: { "cache-control": "no-store, max-age=0" } }
+      );
+    }
+
     return Response.json({ error: "不支援的紀錄類型。" }, { status: 400 });
   } catch (error) {
     return Response.json({ error: routeError(error) }, { status: 500 });
@@ -245,6 +295,20 @@ export async function DELETE(request: Request) {
         .returning({ id: injections.id });
       if (!deleted) {
         return Response.json({ error: "找不到要刪除的施打紀錄。" }, { status: 404 });
+      }
+      return Response.json({
+        ok: true,
+        deletedId: deleted.id,
+        data: await readTrackerData(db, profile),
+      });
+    }
+    if (type === "weight") {
+      const [deleted] = await db
+        .delete(weights)
+        .where(and(eq(weights.id, id), eq(weights.profile, profile)))
+        .returning({ id: weights.id });
+      if (!deleted) {
+        return Response.json({ error: "找不到要刪除的體重紀錄。" }, { status: 404 });
       }
       return Response.json({
         ok: true,

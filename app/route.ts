@@ -3,7 +3,7 @@ export async function GET(request: Request) {
   const title = "猛健樂卡皮巴拉紀錄";
   const description = "記錄猛健樂購買時間、次數、金額，以及腹部四象限施打位置。";
   const socialImage = `${origin}/og.png`;
-  const assetVersion = "20260822-mobile-picker";
+  const assetVersion = "20260822-weight-trends";
 
   const html = `<!doctype html>
 <html lang="zh-Hant">

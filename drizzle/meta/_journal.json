@@ -15,6 +15,13 @@
       "when": 1787393231440,
       "tag": "0001_legal_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787403789429,
+      "tag": "0002_sour_cerise",
+      "breakpoints": true
     }
   ]
 }
