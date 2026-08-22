@@ -7,9 +7,11 @@ import { bootstrapApplication } from "@angular/platform-browser";
 type EntryTab = "injection" | "purchase";
 type ViewTab = "home" | "entry" | "history";
 type LocationKey = "upper_left" | "upper_right" | "lower_left" | "lower_right";
+type ProfileKey = "wenwen" | "haohao";
 
 interface PurchaseRecord {
   id: number;
+  profile: ProfileKey;
   purchaseDate: string;
   purchaseTime: string;
   purchaseCount: number;
@@ -19,6 +21,7 @@ interface PurchaseRecord {
 
 interface InjectionRecord {
   id: number;
+  profile: ProfileKey;
   injectionDate: string;
   injectionTime: string;
   location: LocationKey;
@@ -53,6 +56,21 @@ const locationCycle: Record<LocationKey, LocationKey> = {
   lower_right: "lower_left",
   lower_left: "upper_left",
 };
+
+const profileOptions = [
+  {
+    key: "wenwen" as const,
+    name: "文文",
+    avatar: "/capybara-wenwen.png",
+    caption: "粉紅小天地",
+  },
+  {
+    key: "haohao" as const,
+    name: "豪豪",
+    avatar: "/capybara-haohao.png",
+    caption: "藍色小天地",
+  },
+];
 
 const emptyData: TrackerData = {
   summary: {
@@ -94,15 +112,42 @@ function addDays(date: string, days: number) {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="tracker-app" [class.is-entry-mode]="activeView === 'entry'">
+    <section class="profile-picker" *ngIf="!selectedProfile">
+      <main class="profile-picker-shell">
+        <span class="profile-kicker">猛健樂紀錄</span>
+        <h1>今天是誰使用？</h1>
+        <div class="profile-options" aria-label="選擇使用者">
+          <button
+            *ngFor="let profile of profiles"
+            class="profile-choice"
+            [class.is-wenwen]="profile.key === 'wenwen'"
+            [class.is-haohao]="profile.key === 'haohao'"
+            type="button"
+            (click)="selectProfile(profile.key)"
+          >
+            <img [src]="profile.avatar" alt="" />
+            <strong>{{ profile.name }}</strong>
+            <span>{{ profile.caption }}</span>
+          </button>
+        </div>
+      </main>
+    </section>
+
+    <section
+      class="tracker-app"
+      *ngIf="selectedProfile"
+      [class.is-entry-mode]="activeView === 'entry'"
+      [class.profile-wenwen]="selectedProfile === 'wenwen'"
+      [class.profile-haohao]="selectedProfile === 'haohao'"
+    >
       <aside class="side-nav" aria-label="桌面導覽">
-        <div class="brand-block">
-          <img src="/capybara-avatar-v2.png" alt="" class="brand-avatar" />
+        <button class="brand-block profile-switch" type="button" (click)="showProfilePicker()" [attr.aria-label]="'切換使用者，目前是' + currentProfile.name">
+          <img [src]="currentProfile.avatar" alt="" class="brand-avatar" />
           <div>
-            <strong>猛健樂紀錄</strong>
+            <strong>{{ currentProfile.name }}的紀錄</strong>
             <span>Capybara Log</span>
           </div>
-        </div>
+        </button>
 
         <nav class="side-links">
           <button type="button" [class.is-active]="activeView === 'home'" (click)="setView('home')">
@@ -124,12 +169,9 @@ function addDays(date: string, days: number) {
 
       <main class="workspace">
         <header class="mobile-topbar">
-          <div class="mobile-brand">
-            <img src="/capybara-avatar-v2.png" alt="" class="brand-avatar" />
-            <strong>猛健樂紀錄</strong>
-          </div>
-          <button class="notification-button" type="button" aria-label="提醒">
-            <span class="bell-icon" aria-hidden="true"></span>
+          <button class="mobile-brand profile-switch" type="button" (click)="showProfilePicker()" [attr.aria-label]="'切換使用者，目前是' + currentProfile.name">
+            <img [src]="currentProfile.avatar" alt="" class="brand-avatar" />
+            <strong>{{ currentProfile.name }}的紀錄</strong>
           </button>
         </header>
 
@@ -201,7 +243,12 @@ function addDays(date: string, days: number) {
                   <small class="row-time">{{ record.injectionTime || '--:--' }}</small>
                   <span class="row-location">{{ placeLabel(record.location) }}</span>
                   <span class="row-note">{{ record.note || '—' }}</span>
-                  <span class="row-chevron" aria-hidden="true">›</span>
+                  <button
+                    class="row-chevron"
+                    type="button"
+                    [attr.aria-label]="'查看 ' + formatDate(record.injectionDate) + ' 的施打紀錄'"
+                    (click)="openHistoryRecord(record.id)"
+                  >›</button>
                 </article>
               </div>
             </section>
@@ -410,7 +457,11 @@ function addDays(date: string, days: number) {
             <table *ngIf="filteredInjections.length">
               <thead><tr><th>日期</th><th>時間</th><th>施打部位</th><th>備註</th><th><span class="sr-only">操作</span></th></tr></thead>
               <tbody>
-                <tr *ngFor="let record of filteredInjections">
+                <tr
+                  *ngFor="let record of filteredInjections"
+                  [attr.data-injection-id]="record.id"
+                  [class.is-target-record]="highlightedInjectionId === record.id"
+                >
                   <td data-label="日期">{{ record.injectionDate }}</td>
                   <td data-label="時間">{{ record.injectionTime || '--:--' }}</td>
                   <td data-label="施打部位"><span class="location-badge">{{ placeLabel(record.location) }}</span></td>
@@ -461,6 +512,7 @@ class TrackerAppComponent {
   private readonly cdr = inject(ChangeDetectorRef);
   private messageTimer: ReturnType<typeof setTimeout> | null = null;
   readonly localToday = localDate();
+  readonly profiles = profileOptions;
   readonly locationOptions = [
     { key: "upper_left" as const, label: locationLabels.upper_left },
     { key: "upper_right" as const, label: locationLabels.upper_right },
@@ -469,22 +521,56 @@ class TrackerAppComponent {
   ];
 
   data: TrackerData = emptyData;
+  selectedProfile: ProfileKey | null = null;
   activeEntry: EntryTab = "injection";
   historyTab: EntryTab = "injection";
   activeView: ViewTab = "home";
   injectionStep: 1 | 2 = 1;
   filterLocation = "all";
   filterDate = "";
-  loading = true;
+  loading = false;
   saving: EntryTab | "" = "";
   deleting = "";
+  highlightedInjectionId: number | null = null;
   message = "";
   messageTone: "success" | "error" = "success";
   purchase = this.newPurchase();
   injection = this.newInjection();
 
-  ngOnInit() {
+  get currentProfile() {
+    return (
+      this.profiles.find((profile) => profile.key === this.selectedProfile) ??
+      this.profiles[0]
+    );
+  }
+
+  selectProfile(profile: ProfileKey) {
+    this.selectedProfile = profile;
+    this.data = emptyData;
+    this.activeView = "home";
+    this.activeEntry = "injection";
+    this.historyTab = "injection";
+    this.injectionStep = 1;
+    this.filterLocation = "all";
+    this.filterDate = "";
+    this.highlightedInjectionId = null;
+    this.purchase = this.newPurchase();
+    this.injection = this.newInjection();
+    this.message = "";
+    window.scrollTo({ top: 0 });
+    this.refreshUi();
     void this.load();
+  }
+
+  showProfilePicker() {
+    this.selectedProfile = null;
+    this.data = emptyData;
+    this.loading = false;
+    this.saving = "";
+    this.deleting = "";
+    this.message = "";
+    window.scrollTo({ top: 0 });
+    this.refreshUi();
   }
 
   get recentInjections() {
@@ -564,6 +650,21 @@ class TrackerAppComponent {
     this.setView("entry");
   }
 
+  openHistoryRecord(id: number) {
+    this.historyTab = "injection";
+    this.filterLocation = "all";
+    this.filterDate = "";
+    this.highlightedInjectionId = id;
+    this.activeView = "history";
+    this.message = "";
+    this.refreshUi();
+    setTimeout(() => {
+      document
+        .querySelector(`[data-injection-id="${id}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+  }
+
   nextInjectionStep() {
     if (!this.injection.injectionDate) {
       this.showMessage("請先選擇施打日期", "error");
@@ -588,12 +689,15 @@ class TrackerAppComponent {
   }
 
   async load() {
+    const profile = this.selectedProfile;
+    if (!profile) return false;
     this.loading = true;
     this.refreshUi();
     try {
-      const response = await fetch("/api/records", { cache: "no-store" });
+      const response = await fetch(`/api/records?profile=${profile}`, { cache: "no-store" });
       const payload = (await response.json()) as TrackerData & { error?: string };
       if (!response.ok) throw new Error(payload.error || "讀取紀錄失敗");
+      if (this.selectedProfile !== profile) return false;
       this.data = payload;
       if (this.activeView === "home" && this.injectionStep === 1) {
         this.injection = {
@@ -640,19 +744,25 @@ class TrackerAppComponent {
   }
 
   async save(type: EntryTab, body: Record<string, unknown>) {
+    const profile = this.selectedProfile;
+    if (!profile) {
+      this.showMessage("請先選擇使用者。", "error");
+      return false;
+    }
     this.saving = type;
     this.refreshUi();
     try {
       const response = await fetch("/api/records", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, profile }),
       });
       const payload = (await response.json()) as {
         error?: string;
         data?: TrackerData;
       } & Record<string, unknown>;
       if (!response.ok) throw new Error(payload.error || "儲存失敗");
+      if (this.selectedProfile !== profile) return false;
       if (payload.data) {
         this.data = payload.data;
         this.loading = false;
@@ -674,16 +784,19 @@ class TrackerAppComponent {
   }
 
   async deleteRecord(type: EntryTab, id: number) {
+    const profile = this.selectedProfile;
+    if (!profile) return;
     if (!window.confirm("確定要刪除這筆紀錄嗎？")) return;
     this.deleting = `${type}-${id}`;
     this.refreshUi();
     try {
-      const response = await fetch(`/api/records?type=${type}&id=${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/records?type=${type}&id=${id}&profile=${profile}`, { method: "DELETE" });
       const payload = (await response.json()) as {
         error?: string;
         data?: TrackerData;
       } & Record<string, unknown>;
       if (!response.ok) throw new Error(payload.error || "刪除失敗");
+      if (this.selectedProfile !== profile) return;
       if (payload.data) {
         this.data = payload.data;
         this.loading = false;

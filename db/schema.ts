@@ -5,6 +5,7 @@ export const purchases = sqliteTable(
   "purchases",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    profile: text("profile").notNull().default("wenwen"),
     purchaseDate: text("purchase_date").notNull(),
     purchaseTime: text("purchase_time").notNull().default(""),
     purchaseCount: integer("purchase_count").notNull().default(1),
@@ -12,13 +13,20 @@ export const purchases = sqliteTable(
     note: text("note").notNull().default(""),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
-  (table) => [index("idx_purchases_purchase_date").on(table.purchaseDate)]
+  (table) => [
+    index("idx_purchases_purchase_date").on(table.purchaseDate),
+    index("idx_purchases_profile_purchase_date").on(
+      table.profile,
+      table.purchaseDate
+    ),
+  ]
 );
 
 export const injections = sqliteTable(
   "injections",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    profile: text("profile").notNull().default("wenwen"),
     injectionDate: text("injection_date").notNull(),
     injectionTime: text("injection_time").notNull().default(""),
     location: text("location").notNull(),
@@ -28,6 +36,10 @@ export const injections = sqliteTable(
   },
   (table) => [
     index("idx_injections_injection_date").on(table.injectionDate),
+    index("idx_injections_profile_injection_date").on(
+      table.profile,
+      table.injectionDate
+    ),
     index("idx_injections_location").on(table.location),
   ]
 );

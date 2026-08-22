@@ -42,6 +42,8 @@ test("includes the Angular client and capybara assets", async () => {
     readFile(new URL("../app/angular/main.ts", import.meta.url), "utf8"),
     access(new URL("../public/capybara-hero.png", import.meta.url)),
     access(new URL("../public/og.png", import.meta.url)),
+    access(new URL("../public/capybara-wenwen.png", import.meta.url)),
+    access(new URL("../public/capybara-haohao.png", import.meta.url)),
   ]);
   assert.match(client, /mounjaro-tracker/);
   assert.match(client, /\/api\/records/);
@@ -51,4 +53,6 @@ test("includes the Angular client and capybara assets", async () => {
   assert.match(source, /確認儲存/);
   assert.match(source, /左上腹/);
   assert.match(source, /右下腹/);
+  assert.match(source, /今天是誰使用/);
+  assert.match(source, /profile=\$\{profile\}/);
 });

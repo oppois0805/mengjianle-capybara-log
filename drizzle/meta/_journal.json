@@ -8,6 +8,13 @@
       "when": 1787387790071,
       "tag": "0000_safe_roxanne_simpson",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787393231440,
+      "tag": "0001_legal_nova",
+      "breakpoints": true
     }
   ]
 }
