@@ -319,7 +319,7 @@ function addDays(date: string, days: number) {
               </div>
 
               <div class="step-panel" *ngIf="injectionStep === 1">
-                <div class="field-row">
+                <div class="field-row date-time-row">
                   <label>
                     <span>施打日期</span>
                     <input type="date" [value]="injection.injectionDate" (input)="setInjection('injectionDate', valueFrom($event))" required />
@@ -387,7 +387,7 @@ function addDays(date: string, days: number) {
               <div class="step-head">
                 <h2>記錄購買</h2>
               </div>
-              <div class="field-row">
+              <div class="field-row date-time-row">
                 <label>
                   <span>購買日期</span>
                   <input type="date" [value]="purchase.purchaseDate" (input)="setPurchase('purchaseDate', valueFrom($event))" required />
@@ -444,9 +444,17 @@ function addDays(date: string, days: number) {
                   <option *ngFor="let option of locationOptions" [value]="option.key">{{ option.label }}</option>
                 </select>
               </label>
-              <label>
+              <label class="date-filter">
                 <span>日期</span>
-                <input type="date" [value]="filterDate" (input)="filterDate = valueFrom($event)" />
+                <span class="date-input-wrap" [class.is-empty]="!filterDate">
+                  <input
+                    type="date"
+                    [value]="filterDate"
+                    (input)="filterDate = valueFrom($event)"
+                    aria-label="依日期篩選；未選擇時顯示全部日期"
+                  />
+                  <span class="date-empty-label" *ngIf="!filterDate" aria-hidden="true">全部日期</span>
+                </span>
               </label>
             </div>
           </div>

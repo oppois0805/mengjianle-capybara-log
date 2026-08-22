@@ -355,7 +355,7 @@ Note: Recommended intrinsic image size is calculated assuming a maximum DPR of $
               </div>
 
               <div class="step-panel" *ngIf="injectionStep === 1">
-                <div class="field-row">
+                <div class="field-row date-time-row">
                   <label>
                     <span>\u65BD\u6253\u65E5\u671F</span>
                     <input type="date" [value]="injection.injectionDate" (input)="setInjection('injectionDate', valueFrom($event))" required />
@@ -423,7 +423,7 @@ Note: Recommended intrinsic image size is calculated assuming a maximum DPR of $
               <div class="step-head">
                 <h2>\u8A18\u9304\u8CFC\u8CB7</h2>
               </div>
-              <div class="field-row">
+              <div class="field-row date-time-row">
                 <label>
                   <span>\u8CFC\u8CB7\u65E5\u671F</span>
                   <input type="date" [value]="purchase.purchaseDate" (input)="setPurchase('purchaseDate', valueFrom($event))" required />
@@ -480,9 +480,17 @@ Note: Recommended intrinsic image size is calculated assuming a maximum DPR of $
                   <option *ngFor="let option of locationOptions" [value]="option.key">{{ option.label }}</option>
                 </select>
               </label>
-              <label>
+              <label class="date-filter">
                 <span>\u65E5\u671F</span>
-                <input type="date" [value]="filterDate" (input)="filterDate = valueFrom($event)" />
+                <span class="date-input-wrap" [class.is-empty]="!filterDate">
+                  <input
+                    type="date"
+                    [value]="filterDate"
+                    (input)="filterDate = valueFrom($event)"
+                    aria-label="\u4F9D\u65E5\u671F\u7BE9\u9078\uFF1B\u672A\u9078\u64C7\u6642\u986F\u793A\u5168\u90E8\u65E5\u671F"
+                  />
+                  <span class="date-empty-label" *ngIf="!filterDate" aria-hidden="true">\u5168\u90E8\u65E5\u671F</span>
+                </span>
               </label>
             </div>
           </div>
