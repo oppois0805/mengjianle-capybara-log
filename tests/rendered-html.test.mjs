@@ -32,7 +32,7 @@ test("renders the finished tracker shell", async () => {
   assert.match(html, /<title>猛健樂卡皮巴拉紀錄<\/title>/);
   assert.match(html, /<mounjaro-tracker>/);
   assert.match(html, /\/mounjaro-app\.js/);
-  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260822-weight-trends/);
+  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260822-calendar-editing/);
   assert.match(html, /\/og\.png/);
   assert.doesNotMatch(html, /codex-preview|_sites-preview|Starter Project/);
 });
@@ -53,6 +53,7 @@ test("includes the Angular client and capybara assets", async () => {
   assert.match(source, /猛健樂紀錄/);
   assert.match(source, /下次施打/);
   assert.match(source, /總施打次數/);
+  assert.match(source, /data\.summary\.totalPurchaseCount/);
   assert.match(source, /確認儲存/);
   assert.match(source, /左上腹/);
   assert.match(source, /右下腹/);
@@ -63,7 +64,13 @@ test("includes the Angular client and capybara assets", async () => {
   assert.match(source, /type EntryTab = "injection" \| "purchase" \| "weight"/);
   assert.match(source, /health-trend-chart/);
   assert.match(source, /setChartRange/);
+  assert.match(source, /openEditRecord/);
+  assert.match(source, /method: editingId === null \? "POST" : "PATCH"/);
+  assert.match(source, /today\.getDay\(\) === 0 \? 6 : today\.getDay\(\) - 1/);
+  assert.match(source, /new Date\(year, month \+ 1, 0, 12\)\.getDate\(\)/);
+  assert.match(source, /Array\.from\(\{ length: 12 \}/);
   assert.match(client, /echarts/);
+  assert.match(api, /export async function PATCH/);
   assert.match(api, /type === "weight"/);
   assert.match(api, /weightRecordsCount/);
   assert.match(schema, /export const weights = sqliteTable/);

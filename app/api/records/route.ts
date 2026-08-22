@@ -259,6 +259,121 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const payload = (await request.json()) as Record<string, unknown>;
+    const type = toText(payload.type);
+    const profile = toProfile(payload.profile);
+    const id = Number(payload.id);
+
+    if (!profile) {
+      return Response.json({ error: "請先選擇使用者。" }, { status: 400 });
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+      return Response.json({ error: "紀錄編號不正確。" }, { status: 400 });
+    }
+
+    await ensureDbSchema();
+    const db = getDb();
+
+    if (type === "purchase") {
+      const purchaseDate = toDate(payload.purchaseDate);
+      const purchaseTime = toTime(payload.purchaseTime);
+      const purchaseCount = toPositiveInteger(payload.purchaseCount);
+      const totalAmount = toAmount(payload.totalAmount);
+
+      if (!purchaseDate || !purchaseCount || totalAmount < 0) {
+        return Response.json(
+          { error: "請確認購買日期、次數與總金額。" },
+          { status: 400 }
+        );
+      }
+
+      const [record] = await db
+        .update(purchases)
+        .set({
+          purchaseDate,
+          purchaseTime,
+          purchaseCount,
+          totalAmount,
+          note: toText(payload.note),
+        })
+        .where(and(eq(purchases.id, id), eq(purchases.profile, profile)))
+        .returning();
+
+      if (!record) {
+        return Response.json({ error: "找不到要編輯的購買紀錄。" }, { status: 404 });
+      }
+      return Response.json({ record, data: await readTrackerData(db, profile) });
+    }
+
+    if (type === "injection") {
+      const injectionDate = toDate(payload.injectionDate);
+      const injectionTime = toTime(payload.injectionTime);
+      const location = toText(payload.location);
+      const nextInjectionDate =
+        toDate(payload.nextInjectionDate) || addDays(injectionDate, 7);
+
+      if (!injectionDate || !locations.has(location)) {
+        return Response.json(
+          { error: "請確認施打日期與施打位置。" },
+          { status: 400 }
+        );
+      }
+
+      const [record] = await db
+        .update(injections)
+        .set({
+          injectionDate,
+          injectionTime,
+          location,
+          nextInjectionDate,
+          note: toText(payload.note),
+        })
+        .where(and(eq(injections.id, id), eq(injections.profile, profile)))
+        .returning();
+
+      if (!record) {
+        return Response.json({ error: "找不到要編輯的施打紀錄。" }, { status: 404 });
+      }
+      return Response.json({ record, data: await readTrackerData(db, profile) });
+    }
+
+    if (type === "weight") {
+      const recordDate = toDate(payload.recordDate);
+      const recordTime = toTime(payload.recordTime);
+      const weightKg = toWeight(payload.weightKg);
+
+      if (!recordDate || weightKg < 0) {
+        return Response.json(
+          { error: "請確認測量日期與體重，體重需介於 20 至 500 公斤。" },
+          { status: 400 }
+        );
+      }
+
+      const [record] = await db
+        .update(weights)
+        .set({
+          recordDate,
+          recordTime,
+          weightKg,
+          note: toText(payload.note),
+        })
+        .where(and(eq(weights.id, id), eq(weights.profile, profile)))
+        .returning();
+
+      if (!record) {
+        return Response.json({ error: "找不到要編輯的體重紀錄。" }, { status: 404 });
+      }
+      return Response.json({ record, data: await readTrackerData(db, profile) });
+    }
+
+    return Response.json({ error: "不支援的紀錄類型。" }, { status: 400 });
+  } catch (error) {
+    return Response.json({ error: routeError(error) }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const url = new URL(request.url);

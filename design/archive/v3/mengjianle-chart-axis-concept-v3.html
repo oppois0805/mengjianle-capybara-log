@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>猛健樂圖表日期區間概念 v3</title>
+  <script src="../../node_modules/echarts/dist/echarts.min.js"></script>
+  <style>
+    :root{--ink:#24231f;--muted:#716e66;--line:#d9dedb;--paper:#fffdfa;--bg:#edf6fb;--teal:#4c918f;--coral:#f46d5a;--pink:#f7e8ee;--shadow:0 16px 44px rgba(55,58,54,.12)}
+    *{box-sizing:border-box}body{width:1600px;height:900px;margin:0;overflow:hidden;color:var(--ink);background:linear-gradient(90deg,#fff9fb 0 33%,#f0f8fb 33% 67%,#fffaf7 67% 100%);font-family:"Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif}.title{display:flex;align-items:baseline;gap:18px;padding:28px 42px}.title h1{margin:0;font-size:28px}.title span{color:var(--teal);font-size:14px;font-weight:900}.states{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:0 42px}.state{height:760px;overflow:hidden;border:1px solid #cad5d3;border-radius:10px;background:rgba(255,255,255,.96);box-shadow:var(--shadow)}.state-head{display:flex;align-items:center;justify-content:space-between;padding:22px 22px 16px}.state-head h2{margin:0;font-size:20px}.state-head strong{color:var(--teal);font-size:13px}.segment{display:grid;width:210px;grid-template-columns:repeat(3,1fr);gap:3px;margin:0 22px;padding:4px;border-radius:8px;background:#dfeef5}.segment span{display:grid;height:40px;place-items:center;border-radius:6px;color:#6b6861;font-size:13px;font-weight:900}.segment .active{color:var(--ink);background:#fff;box-shadow:0 1px 3px rgba(30,30,20,.12)}.range{display:flex;align-items:center;justify-content:space-between;margin:18px 22px 0;padding:12px 14px;border-left:4px solid var(--teal);background:#f6faf9}.range b{font-size:15px}.range small{color:var(--muted);font-size:11px}.legend{display:flex;gap:18px;margin:16px 22px 0;color:var(--muted);font-size:11px;font-weight:800}.legend span{display:flex;align-items:center;gap:7px}.legend i{display:block;width:18px;height:3px;background:var(--teal)}.legend i.bar{width:8px;height:14px;background:var(--coral)}.chart{height:470px;margin:2px 8px 0}.axis-note{margin:0 22px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}.axis-note b{color:var(--ink)}
+  </style>
+</head>
+<body>
+  <header class="title"><h1>體重與施打趨勢 X 軸</h1><span>Calendar ranges</span></header>
+  <main class="states">
+    <section class="state"><div class="state-head"><h2>本週</h2><strong>週一到週日</strong></div><div class="segment"><span class="active">週</span><span>月</span><span>年</span></div><div class="range"><b>8月17日－8月23日</b><small>2026 年第 34 週</small></div><div class="legend"><span><i></i>體重 kg</span><span><i class="bar"></i>施打時間</span></div><div id="week" class="chart"></div><p class="axis-note"><b>X 軸：</b>週一、週二、週三、週四、週五、週六、週日</p></section>
+    <section class="state"><div class="state-head"><h2>本月</h2><strong>1 日到月底</strong></div><div class="segment"><span>週</span><span class="active">月</span><span>年</span></div><div class="range"><b>8月1日－8月31日</b><small>2026 年 8 月</small></div><div class="legend"><span><i></i>體重 kg</span><span><i class="bar"></i>施打時間</span></div><div id="month" class="chart"></div><p class="axis-note"><b>X 軸：</b>完整月份；標籤依寬度等距顯示，資料仍涵蓋每天</p></section>
+    <section class="state"><div class="state-head"><h2>本年</h2><strong>1 月到 12 月</strong></div><div class="segment"><span>週</span><span>月</span><span class="active">年</span></div><div class="range"><b>1月－12月</b><small>2026 年</small></div><div class="legend"><span><i></i>體重 kg</span><span><i class="bar"></i>施打時間</span></div><div id="year" class="chart"></div><p class="axis-note"><b>X 軸：</b>1 月、2 月、3 月…12 月，年度切換時整年更新</p></section>
+  </main>
+  <script>
+    const teal='#4c918f',coral='#f46d5a',line='#d9dedb',muted='#716e66';
+    function chart(id, labels, weights, shots, interval){
+      const el=document.getElementById(id);const instance=echarts.init(el,null,{renderer:'canvas'});
+      instance.setOption({animation:false,grid:{top:42,right:54,bottom:54,left:50},tooltip:{trigger:'axis'},xAxis:{type:'category',data:labels,boundaryGap:true,axisTick:{show:false},axisLine:{lineStyle:{color:line}},axisLabel:{color:muted,fontSize:10,interval}},yAxis:[{type:'value',name:'kg',min:74,max:80,interval:1,nameTextStyle:{color:muted},axisLabel:{color:muted,fontSize:10},axisTick:{show:false},axisLine:{show:false},splitLine:{lineStyle:{color:line}}},{type:'value',name:'施打時間',min:0,max:24,interval:6,nameTextStyle:{color:muted},axisLabel:{color:muted,fontSize:10,formatter:v=>String(v).padStart(2,'0')+':00'},axisTick:{show:false},axisLine:{show:false},splitLine:{show:false}}],series:[{name:'施打時間',type:'bar',yAxisIndex:1,barMaxWidth:13,itemStyle:{color:coral,borderRadius:[3,3,0,0],opacity:.72},data:shots},{name:'體重',type:'line',yAxisIndex:0,smooth:.25,symbol:'circle',symbolSize:7,lineStyle:{color:teal,width:3},itemStyle:{color:'#fff',borderColor:teal,borderWidth:3},connectNulls:true,data:weights}]});
+    }
+    chart('week',['8/17 一','8/18 二','8/19 三','8/20 四','8/21 五','8/22 六','8/23 日'],[78.2,null,77.9,null,77.5,76.8,null],[null,null,null,20.5,null,20.7,null],0);
+    const days=Array.from({length:31},(_,i)=>String(i+1));const mw=days.map((_,i)=>[0,7,14,21,30].includes(i)?[79.4,78.8,78.1,77.5,76.8][[0,7,14,21,30].indexOf(i)]:null);const ms=days.map((_,i)=>[1,8,15,22,29].includes(i)?20.5:null);chart('month',days,mw,ms,4);
+    chart('year',['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],[null,null,null,null,null,80.1,78.9,76.8,null,null,null,null],[null,null,null,null,null,20.4,20.6,20.7,null,null,null,null],0);
+  </script>
+</body>
+</html>

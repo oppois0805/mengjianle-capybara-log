@@ -270,6 +270,7 @@ p {
 .side-links button,
 .bottom-nav button,
 .quadrant,
+.edit-action,
 .delete-action {
   border: 0;
   cursor: pointer;
@@ -880,6 +881,7 @@ td::before {
 .action-cell {
   display: flex;
   grid-column: 1 / -1;
+  gap: 8px;
   justify-content: flex-end;
 }
 
@@ -898,12 +900,24 @@ td::before {
   font-weight: 800;
 }
 
+.edit-action,
 .delete-action {
   display: grid;
   width: 44px;
   height: 44px;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 6px;
+}
+
+.edit-action {
+  border: 1px solid var(--teal);
+  background: var(--surface);
+  color: var(--teal-dark);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.delete-action {
   background: var(--coral-soft);
   color: var(--danger);
   font-size: 1.35rem;
@@ -1202,7 +1216,7 @@ td::before {
   }
 
   .action-cell {
-    width: 60px;
+    width: 112px;
     text-align: right;
   }
 }
@@ -2021,18 +2035,6 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   text-align: center;
 }
 
-.entry-view .page-head::before {
-  position: absolute;
-  top: 9px;
-  left: 50%;
-  width: 42px;
-  height: 4px;
-  border-radius: 4px;
-  background: #d8d5cf;
-  content: "";
-  transform: translateX(-50%);
-}
-
 .entry-view .page-head h1 {
   font-size: 1.32rem;
 }
@@ -2068,6 +2070,45 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 
 .record-form {
   margin-top: 0;
+}
+
+.edit-context {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--teal);
+  border-radius: 6px;
+  background: var(--teal-soft);
+}
+
+.edit-context-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--teal-dark);
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.edit-context strong,
+.edit-context small {
+  display: block;
+}
+
+.edit-context strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.edit-context small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
 }
 
 .injection-step-head {
@@ -2439,8 +2480,7 @@ select {
     border-radius: 52px;
   }
 
-  .entry-close,
-  .entry-view .page-head::before {
+  .entry-close {
     display: none;
   }
 

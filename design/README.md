@@ -17,4 +17,18 @@
 
 ## Demo
 
+### V4 page-by-page demos
+
+Open `demo/v4/00-index.html` first. Every screen has its own HTML file:
+
+- `01-history-injection.html` -> `02-edit-injection.html`
+- `03-history-purchase.html` -> `04-edit-purchase.html`
+- `05-history-weight.html` -> `06-edit-weight.html`
+- `07-chart-week.html`
+- `08-chart-month.html`
+- `09-chart-year.html`
+
+All edit actions use one full-page layout on both mobile and desktop. Older
+combined concepts are preserved under `archive/v2` and `archive/v3`.
+
 開啟 `demo/mengjianle-weight-concept.html`，可切換手機首頁、體重紀錄與電腦首頁，並操作週、月、年圖表期間。

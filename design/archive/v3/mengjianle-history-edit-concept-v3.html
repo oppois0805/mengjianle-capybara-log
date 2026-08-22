@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>猛健樂歷史編輯概念 v3</title>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --ink: #24231f;
+      --muted: #716e66;
+      --line: #ded8d0;
+      --paper: #fffdfa;
+      --bg: #f7f3ef;
+      --blue-bg: #edf6fb;
+      --teal: #4c918f;
+      --teal-soft: #e6f2f0;
+      --coral: #f46d5a;
+      --coral-soft: #fde9e5;
+      --pink: #f7e8ee;
+      --shadow: 0 22px 56px rgba(60, 52, 45, .16);
+    }
+    * { box-sizing: border-box; }
+    body {
+      width: 1600px;
+      height: 1060px;
+      margin: 0;
+      overflow: hidden;
+      color: var(--ink);
+      background: linear-gradient(90deg, #fff9fb 0 28%, #f4f9fc 28% 100%);
+      font-family: "Microsoft JhengHei", "Noto Sans TC", system-ui, sans-serif;
+    }
+    button, input, select { font: inherit; }
+    .board-title {
+      position: absolute;
+      top: 30px;
+      left: 30px;
+      display: flex;
+      align-items: baseline;
+      gap: 18px;
+    }
+    .board-title h1 { margin: 0; font-size: 28px; letter-spacing: 0; }
+    .board-title span { color: var(--teal); font-size: 14px; font-weight: 800; }
+    .phone {
+      position: absolute;
+      top: 92px;
+      width: 390px;
+      height: 920px;
+      overflow: hidden;
+      border: 10px solid #252524;
+      border-radius: 44px;
+      background: var(--blue-bg);
+      box-shadow: var(--shadow);
+    }
+    .phone.one { left: 30px; }
+    .phone.two { left: 450px; }
+    .screen { height: 100%; background: var(--blue-bg); }
+    .mobile-head {
+      display: flex;
+      min-height: 74px;
+      align-items: center;
+      gap: 11px;
+      padding: 18px 20px 12px;
+      background: rgba(255,255,255,.75);
+      border-bottom: 1px solid #e2e7e8;
+    }
+    .avatar { width: 38px; height: 38px; object-fit: contain; }
+    .mobile-head strong { font-size: 17px; }
+    .mobile-main { padding: 18px 16px 88px; }
+    .eyebrow { margin: 0 0 2px; color: var(--teal); font-size: 10px; font-weight: 900; text-transform: uppercase; }
+    .page-line { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    h2 { margin: 0; font-size: 25px; letter-spacing: 0; }
+    .refresh {
+      display: inline-flex;
+      width: 40px;
+      height: 40px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #c9d5d8;
+      border-radius: 7px;
+      color: var(--ink);
+      background: #fff;
+    }
+    .refresh svg { width: 18px; height: 18px; }
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      margin: 16px 0;
+      padding: 4px;
+      border-radius: 8px;
+      background: #dfeef5;
+    }
+    .tab {
+      min-height: 42px;
+      border: 0;
+      border-radius: 6px;
+      color: #5c5a55;
+      background: transparent;
+      font-weight: 800;
+    }
+    .tab.active { color: var(--ink); background: #fff; box-shadow: 0 1px 3px rgba(50,50,40,.12); }
+    .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .filter label { display: block; margin-bottom: 5px; font-size: 11px; font-weight: 800; }
+    .filter div { display: flex; min-height: 40px; align-items: center; justify-content: space-between; padding: 0 10px; border: 1px solid #c9d5d8; border-radius: 7px; background: #fff; font-size: 13px; }
+    .list-panel { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.92); }
+    .list-title { display: flex; min-height: 48px; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1px solid var(--line); }
+    .list-title strong { font-size: 15px; }
+    .list-title span { color: var(--muted); font-size: 11px; }
+    .record { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); }
+    .record:last-child { border-bottom: 0; }
+    .record-main { min-width: 0; }
+    .record-top { display: flex; align-items: center; gap: 8px; }
+    .record-top b { font-size: 15px; }
+    .badge { padding: 3px 7px; border-radius: 999px; background: var(--teal-soft); color: var(--teal); font-size: 10px; font-weight: 900; }
+    .record-meta { display: flex; gap: 10px; margin-top: 7px; color: var(--muted); font-size: 11px; }
+    .record-note { margin-top: 6px; overflow: hidden; color: #57544e; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .record-actions { display: flex; align-items: center; gap: 6px; }
+    .icon-btn {
+      display: inline-flex;
+      width: 38px;
+      height: 38px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #c8d9da;
+      border-radius: 7px;
+      color: var(--teal);
+      background: #fff;
+    }
+    .icon-btn.danger { border-color: #f1cbc4; color: var(--coral); background: #fffaf9; }
+    .icon-btn svg { width: 18px; height: 18px; stroke-width: 2.2; }
+    .bottom-nav {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      display: grid;
+      height: 72px;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid #dde4e5;
+      background: rgba(255,255,255,.96);
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #64625c; font-size: 11px; font-weight: 800; }
+    .nav-item.active { color: var(--teal); }
+    .nav-item svg { width: 21px; height: 21px; }
+    .desktop {
+      position: absolute;
+      top: 92px;
+      right: 30px;
+      width: 710px;
+      height: 920px;
+      overflow: hidden;
+      border: 1px solid #cfd6d4;
+      border-radius: 10px;
+      background: var(--blue-bg);
+      box-shadow: var(--shadow);
+    }
+    .desktop-sidebar { position: absolute; inset: 0 auto 0 0; width: 150px; padding: 28px 14px; background: #e6efea; }
+    .brand { display: flex; align-items: center; gap: 9px; margin-bottom: 34px; font-size: 17px; font-weight: 900; }
+    .brand img { width: 38px; height: 38px; object-fit: contain; }
+    .side-link { display: flex; min-height: 50px; align-items: center; gap: 11px; padding: 0 12px; border-radius: 7px; color: #56544e; font-size: 14px; font-weight: 800; }
+    .side-link.active { color: var(--teal); background: #fff; }
+    .side-link svg { width: 20px; }
+    .desktop-main { margin-left: 150px; padding: 34px 24px; }
+    .desktop .page-line { align-items: center; }
+    .desktop .tabs { width: 300px; margin: 22px 0 18px; }
+    .desktop .filters { width: 420px; }
+    .table-panel { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .table-head, .table-row { display: grid; grid-template-columns: 1fr .65fr .55fr 1.25fr 80px; align-items: center; min-height: 52px; }
+    .table-head { background: #faf9f6; color: var(--muted); font-size: 11px; font-weight: 900; }
+    .table-row { border-top: 1px solid var(--line); font-size: 12px; }
+    .table-head > *, .table-row > * { padding: 0 10px; }
+    .table-actions { display: flex; justify-content: flex-end; gap: 5px; }
+    .table-actions .icon-btn { width: 34px; height: 34px; }
+    .edit-page {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      background: #fffafc;
+    }
+    .phone.show-edit .edit-page { display: block; }
+    .edit-head {
+      display: grid;
+      min-height: 70px;
+      grid-template-columns: 40px 1fr 40px;
+      align-items: center;
+      padding: 8px 14px;
+      border-bottom: 1px solid #e6dfdb;
+      background: rgba(255,255,255,.9);
+    }
+    .edit-head h3 { margin: 0; text-align: center; font-size: 20px; }
+    .back-button, .close-button { display: grid; width: 38px; height: 38px; place-items: center; border: 0; background: transparent; color: var(--ink); }
+    .back-button svg, .close-button svg { width: 21px; height: 21px; }
+    .edit-body { padding: 18px; }
+    .edit-context { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; padding: 12px; border-radius: 7px; background: var(--teal-soft); }
+    .edit-context svg { width: 21px; color: var(--teal); }
+    .edit-context strong { display: block; font-size: 13px; }
+    .edit-context small { color: var(--muted); font-size: 10px; }
+    .edit-field { display: block; margin-bottom: 14px; }
+    .edit-field > span { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 900; }
+    .edit-input { display: flex; min-height: 49px; align-items: center; justify-content: space-between; padding: 0 12px; border: 1px solid #bdced0; border-radius: 7px; background: #fff; font-size: 14px; font-weight: 800; }
+    .edit-input svg { width: 20px; color: #6b6963; }
+    .edit-input.note { min-height: 74px; align-items: flex-start; padding-top: 12px; color: #5f5c55; font-weight: 500; }
+    .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .edit-actions { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-top: 20px; }
+    .secondary-action, .primary-action { height: 50px; border-radius: 7px; font-weight: 900; }
+    .secondary-action { border: 1px solid #c9cecc; background: #fff; color: var(--ink); }
+    .primary-action { display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; background: var(--coral); color: #fff; }
+    .primary-action svg { width: 18px; }
+    .desktop-edit-dialog {
+      position: absolute;
+      z-index: 12;
+      right: 24px;
+      bottom: 28px;
+      display: none;
+      width: 390px;
+      padding: 20px;
+      border: 1px solid #cbd5d3;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 22px 54px rgba(42,47,45,.23);
+    }
+    .desktop.show-edit .desktop-edit-dialog { display: block; }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .dialog-head h3 { margin: 0; font-size: 18px; }
+    .concept-note { position: absolute; right: 52px; bottom: 20px; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="board-title"><h1>歷史紀錄編輯</h1><span>Mobile + Desktop</span></div>
+
+  <section class="phone one">
+    <div class="screen">
+      <header class="mobile-head"><img class="avatar" src="../../public/capybara-haohao.png"><strong>豪豪的紀錄</strong></header>
+      <main class="mobile-main">
+        <p class="eyebrow">History</p>
+        <div class="page-line"><h2>歷史紀錄</h2><button class="refresh" aria-label="重新整理"><i data-lucide="rotate-cw"></i></button></div>
+        <div class="tabs"><button class="tab active">施打</button><button class="tab">購買</button><button class="tab">體重</button></div>
+        <div class="filters"><div class="filter"><label>位置</label><div>全部位置<i data-lucide="chevron-down"></i></div></div><div class="filter"><label>日期</label><div>全部日期<i data-lucide="calendar"></i></div></div></div>
+        <section class="list-panel">
+          <div class="list-title"><strong>施打紀錄</strong><span>3 筆</span></div>
+          <article class="record"><div class="record-main"><div class="record-top"><b>8月22日</b><span class="badge">左上腹</span></div><div class="record-meta"><span>20:44</span><span>下次 8月29日</span></div><div class="record-note">睡前施打，狀況良好</div></div><div class="record-actions"><button class="icon-btn" aria-label="編輯"><i data-lucide="pencil"></i></button><button class="icon-btn danger" aria-label="刪除"><i data-lucide="trash-2"></i></button></div></article>
+          <article class="record"><div class="record-main"><div class="record-top"><b>8月15日</b><span class="badge">左下腹</span></div><div class="record-meta"><span>20:38</span><span>下次 8月22日</span></div><div class="record-note">無不適</div></div><div class="record-actions"><button class="icon-btn"><i data-lucide="pencil"></i></button><button class="icon-btn danger"><i data-lucide="trash-2"></i></button></div></article>
+          <article class="record"><div class="record-main"><div class="record-top"><b>8月8日</b><span class="badge">右上腹</span></div><div class="record-meta"><span>20:31</span><span>下次 8月15日</span></div><div class="record-note">依照輪替建議</div></div><div class="record-actions"><button class="icon-btn"><i data-lucide="pencil"></i></button><button class="icon-btn danger"><i data-lucide="trash-2"></i></button></div></article>
+        </section>
+      </main>
+      <section class="edit-page" aria-label="編輯施打紀錄">
+        <header class="edit-head"><button class="back-button edit-close"><i data-lucide="chevron-left"></i></button><h3>編輯施打</h3><span></span></header>
+        <div class="edit-body">
+          <div class="edit-context"><i data-lucide="pencil"></i><div><strong>編輯 8月22日施打紀錄</strong><small>儲存後同步更新首頁與施打輪替</small></div></div>
+          <label class="edit-field"><span>施打日期</span><div class="edit-input">2026/08/22<i data-lucide="calendar"></i></div></label>
+          <label class="edit-field"><span>施打時間</span><div class="edit-input">20:44<i data-lucide="clock-3"></i></div></label>
+          <label class="edit-field"><span>下次施打日期</span><div class="edit-input">2026/08/29<i data-lucide="calendar"></i></div></label>
+          <label class="edit-field"><span>施打位置</span><div class="edit-input">左上腹<i data-lucide="chevron-down"></i></div></label>
+          <label class="edit-field"><span>備註（選填）</span><div class="edit-input note">睡前施打，狀況良好</div></label>
+          <div class="edit-actions"><button class="secondary-action edit-close">取消</button><button class="primary-action"><i data-lucide="save"></i>儲存修改</button></div>
+        </div>
+      </section>
+      <nav class="bottom-nav"><div class="nav-item"><i data-lucide="home"></i>首頁</div><div class="nav-item"><i data-lucide="plus"></i>紀錄</div><div class="nav-item active"><i data-lucide="clock-3"></i>歷史</div></nav>
+    </div>
+  </section>
+
+  <section class="phone two">
+    <div class="screen">
+      <header class="mobile-head"><img class="avatar" src="../../public/capybara-wenwen.png"><strong>文文的紀錄</strong></header>
+      <main class="mobile-main">
+        <p class="eyebrow">History</p>
+        <div class="page-line"><h2>歷史紀錄</h2><button class="refresh"><i data-lucide="rotate-cw"></i></button></div>
+        <div class="tabs"><button class="tab">施打</button><button class="tab">購買</button><button class="tab active">體重</button></div>
+        <div class="filters"><div class="filter" style="grid-column:1/-1"><label>日期</label><div>全部日期<i data-lucide="calendar"></i></div></div></div>
+        <section class="list-panel">
+          <div class="list-title"><strong>體重紀錄</strong><span>3 筆</span></div>
+          <article class="record"><div class="record-main"><div class="record-top"><b>76.8 kg</b><span class="badge">-0.7 kg</span></div><div class="record-meta"><span>8月22日</span><span>07:35</span></div><div class="record-note">早晨空腹</div></div><div class="record-actions"><button class="icon-btn"><i data-lucide="pencil"></i></button><button class="icon-btn danger"><i data-lucide="trash-2"></i></button></div></article>
+          <article class="record"><div class="record-main"><div class="record-top"><b>77.5 kg</b><span class="badge">-0.4 kg</span></div><div class="record-meta"><span>8月15日</span><span>07:42</span></div><div class="record-note">早晨空腹</div></div><div class="record-actions"><button class="icon-btn"><i data-lucide="pencil"></i></button><button class="icon-btn danger"><i data-lucide="trash-2"></i></button></div></article>
+          <article class="record"><div class="record-main"><div class="record-top"><b>77.9 kg</b><span class="badge">首次</span></div><div class="record-meta"><span>8月8日</span><span>07:28</span></div><div class="record-note">開始記錄</div></div><div class="record-actions"><button class="icon-btn"><i data-lucide="pencil"></i></button><button class="icon-btn danger"><i data-lucide="trash-2"></i></button></div></article>
+        </section>
+      </main>
+      <section class="edit-page" aria-label="編輯體重紀錄">
+        <header class="edit-head"><button class="back-button edit-close"><i data-lucide="chevron-left"></i></button><h3>編輯體重</h3><span></span></header>
+        <div class="edit-body">
+          <div class="edit-context"><i data-lucide="pencil"></i><div><strong>編輯 8月22日體重紀錄</strong><small>儲存後同步更新首頁與趨勢圖</small></div></div>
+          <label class="edit-field"><span>測量日期</span><div class="edit-input">2026/08/22<i data-lucide="calendar"></i></div></label>
+          <label class="edit-field"><span>測量時間</span><div class="edit-input">07:35<i data-lucide="clock-3"></i></div></label>
+          <label class="edit-field"><span>體重</span><div class="edit-input"><b>76.8</b><span>kg</span></div></label>
+          <label class="edit-field"><span>備註（選填）</span><div class="edit-input note">早晨空腹</div></label>
+          <div class="edit-actions"><button class="secondary-action edit-close">取消</button><button class="primary-action"><i data-lucide="save"></i>儲存修改</button></div>
+        </div>
+      </section>
+      <nav class="bottom-nav"><div class="nav-item"><i data-lucide="home"></i>首頁</div><div class="nav-item"><i data-lucide="plus"></i>紀錄</div><div class="nav-item active"><i data-lucide="clock-3"></i>歷史</div></nav>
+    </div>
+  </section>
+
+  <section class="desktop">
+    <aside class="desktop-sidebar">
+      <div class="brand"><img src="../../public/capybara-haohao.png">猛健樂紀錄</div>
+      <div class="side-link"><i data-lucide="home"></i>首頁</div>
+      <div class="side-link"><i data-lucide="plus"></i>新增紀錄</div>
+      <div class="side-link active"><i data-lucide="clock-3"></i>歷史</div>
+    </aside>
+    <main class="desktop-main">
+      <p class="eyebrow">History</p>
+      <div class="page-line"><div><h2>歷史紀錄</h2></div><button class="refresh"><i data-lucide="rotate-cw"></i></button></div>
+      <div class="tabs"><button class="tab">施打</button><button class="tab active">購買</button><button class="tab">體重</button></div>
+      <div class="filters"><div class="filter"><label>日期</label><div>全部日期<i data-lucide="calendar"></i></div></div></div>
+      <section class="table-panel">
+        <div class="list-title"><strong>購買紀錄</strong><span>3 筆</span></div>
+        <div class="table-head"><span>日期</span><span>時間</span><span>次數</span><span>總金額／備註</span><span>操作</span></div>
+        <div class="table-row"><span>2026-08-22</span><span>18:10</span><b>1</b><span>NT$ 9,800<br><small>藥局取藥</small></span><div class="table-actions"><button class="icon-btn"><i data-lucide="pencil"></i></button><button class="icon-btn danger"><i data-lucide="trash-2"></i></button></div></div>
+        <div class="table-row"><span>2026-07-25</span><span>17:42</span><b>1</b><span>NT$ 8,800<br><small>醫院領藥</small></span><div class="table-actions"><button class="icon-btn"><i data-lucide="pencil"></i></button><button class="icon-btn danger"><i data-lucide="trash-2"></i></button></div></div>
+        <div class="table-row"><span>2026-06-28</span><span>16:35</span><b>2</b><span>NT$ 17,600<br><small>兩盒</small></span><div class="table-actions"><button class="icon-btn"><i data-lucide="pencil"></i></button><button class="icon-btn danger"><i data-lucide="trash-2"></i></button></div></div>
+      </section>
+    </main>
+    <section class="desktop-edit-dialog" aria-label="編輯購買紀錄">
+      <div class="dialog-head"><h3>編輯購買紀錄</h3><button class="close-button desktop-close"><i data-lucide="x"></i></button></div>
+      <div class="edit-grid"><label class="edit-field"><span>購買日期</span><div class="edit-input">2026/08/22</div></label><label class="edit-field"><span>購買時間</span><div class="edit-input">18:10</div></label></div>
+      <div class="edit-grid"><label class="edit-field"><span>購買次數</span><div class="edit-input">1</div></label><label class="edit-field"><span>總金額（元）</span><div class="edit-input">9,800</div></label></div>
+      <label class="edit-field"><span>備註（選填）</span><div class="edit-input note">藥局取藥</div></label>
+      <div class="edit-actions"><button class="secondary-action desktop-close">取消</button><button class="primary-action"><i data-lucide="save"></i>儲存修改</button></div>
+    </section>
+  </section>
+  <div class="concept-note">鉛筆開啟編輯；垃圾桶保留二次確認</div>
+  <script>
+    lucide.createIcons();
+    document.querySelectorAll('.phone.one .icon-btn:not(.danger)').forEach(button => button.addEventListener('click', () => document.querySelector('.phone.one').classList.add('show-edit')));
+    document.querySelectorAll('.phone.two .icon-btn:not(.danger)').forEach(button => button.addEventListener('click', () => document.querySelector('.phone.two').classList.add('show-edit')));
+    document.querySelectorAll('.edit-close').forEach(button => button.addEventListener('click', () => button.closest('.phone').classList.remove('show-edit')));
+    document.querySelectorAll('.desktop .table-actions .icon-btn:not(.danger)').forEach(button => button.addEventListener('click', () => document.querySelector('.desktop').classList.add('show-edit')));
+    document.querySelectorAll('.desktop-close').forEach(button => button.addEventListener('click', () => document.querySelector('.desktop').classList.remove('show-edit')));
+  </script>
+</body>
+</html>

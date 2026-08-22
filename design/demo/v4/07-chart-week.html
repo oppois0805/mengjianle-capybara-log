@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>首頁趨勢：本週</title>
+  <link rel="stylesheet" href="demo.css">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="../../../node_modules/echarts/dist/echarts.min.js"></script>
+</head>
+<body data-range="week">
+  <div class="app-shell">
+    <aside class="sidebar"><div class="brand"><img src="../../../public/capybara-haohao.png">猛健樂紀錄</div><a class="side-link active"><i data-lucide="home"></i>首頁</a><a class="side-link"><i data-lucide="plus"></i>新增紀錄</a><a class="side-link"><i data-lucide="clock-3"></i>歷史</a></aside>
+    <main class="page">
+      <header class="topbar profile-bar"><img class="avatar" src="../../../public/capybara-haohao.png"><strong>豪豪的紀錄</strong></header>
+      <div class="content">
+        <section class="home-reminder"><div class="reminder-main"><i data-lucide="calendar-days"></i><div><span>下次施打</span><strong>8月29日</strong></div></div><a class="record-action"><i data-lucide="syringe"></i>記錄施打</a></section>
+        <section class="stat-grid">
+          <article class="stat-item"><span>累計花費</span><strong>NT$ 27,652</strong><small>2 筆購買</small><span class="stat-icon coral"><i data-lucide="badge-dollar-sign"></i></span></article>
+          <article class="stat-item"><span>上次位置</span><strong>左上腹</strong><small>8月22日</small><span class="stat-icon"><i data-lucide="map-pin"></i></span></article>
+          <article class="stat-item weight"><span>目前體重</span><strong>76.8 kg</strong><small>8月22日</small><span class="stat-icon"><i data-lucide="scale"></i></span></article>
+          <article class="stat-item injection-count"><span>總施打次數</span><strong>8</strong><small>筆施打紀錄</small><span class="stat-icon"><i data-lucide="syringe"></i></span></article>
+        </section>
+        <p class="eyebrow">Trend</p><div class="page-heading"><div><h2>體重與施打趨勢</h2><p>本週週一至週日</p></div></div>
+        <nav class="tabs"><a class="tab active">週</a><a class="tab" href="08-chart-month.html">月</a><a class="tab" href="09-chart-year.html">年</a></nav>
+        <section class="chart-panel"><div class="range-strip"><b>8月17日－8月23日</b><small>2026 年第 34 週</small></div><div class="legend"><span><i></i>體重 kg</span><span><i class="bar"></i>施打時間</span></div><div id="trend-chart" class="chart"></div></section>
+        <section class="home-lower"><div class="home-section"><h3>最近紀錄</h3><div class="recent-line"><span class="recent-check">✓</span><span><b>8月22日</b><br><small>20:44</small></span><span>左上腹</span></div><div class="recent-line"><span class="recent-check">✓</span><span><b>8月15日</b><br><small>20:38</small></span><span>左下腹</span></div></div><div class="home-section"><h3>施打部位輪替</h3><div class="rotation-body"><div class="rotation-legend"><span>上次施打</span><span>輪替提示</span></div><div class="quadrants"><div class="quadrant active">左上腹</div><div class="quadrant">右上腹</div><div class="quadrant">左下腹</div><div class="quadrant">右下腹</div></div></div></div></section>
+      </div>
+      <nav class="bottom-nav"><a class="active"><i data-lucide="home"></i>首頁</a><a><i data-lucide="plus"></i>紀錄</a><a><i data-lucide="clock-3"></i>歷史</a></nav>
+    </main>
+  </div><script src="chart-demo.js"></script>
+</body></html>

@@ -23,6 +23,14 @@ type ChartRange = "week" | "month" | "year";
 type LocationKey = "upper_left" | "upper_right" | "lower_left" | "lower_right";
 type ProfileKey = "wenwen" | "haohao";
 
+interface ChartBucket {
+  key: string;
+  label: string;
+  fullLabel: string;
+  startDate: string;
+  endDate: string;
+}
+
 interface PurchaseRecord {
   id: number;
   profile: ProfileKey;
@@ -51,6 +59,8 @@ interface WeightRecord {
   weightKg: number;
   note: string;
 }
+
+type EditableRecord = PurchaseRecord | InjectionRecord | WeightRecord;
 
 interface TrackerData {
   summary: {
@@ -134,6 +144,12 @@ function addDays(date: string, days: number) {
   if (Number.isNaN(value.getTime())) return "";
   value.setDate(value.getDate() + days);
   return value.toISOString().slice(0, 10);
+}
+
+function dateKey(value: Date) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(
+    value.getDate()
+  ).padStart(2, "0")}`;
 }
 
 @Component({
@@ -234,7 +250,7 @@ function addDays(date: string, days: number) {
             <article class="stat-item">
               <span>累計花費</span>
               <strong>{{ currency(data.summary.totalSpent) }}</strong>
-              <small>{{ data.summary.purchaseRecordsCount }} 筆購買</small>
+              <small>{{ data.summary.totalPurchaseCount }} 次購買</small>
             </article>
             <article class="stat-item">
               <span>上次位置</span>
@@ -354,14 +370,14 @@ function addDays(date: string, days: number) {
 
         <section class="view entry-view" *ngIf="activeView === 'entry'">
           <div class="page-head">
-            <button class="entry-close" type="button" aria-label="返回首頁" (click)="setView('home')">‹</button>
+            <button class="entry-close" type="button" [attr.aria-label]="isEditing ? '返回歷史紀錄' : '返回首頁'" (click)="closeEntry()">‹</button>
             <div>
               <h1>{{ entryTitle }}</h1>
             </div>
           </div>
 
           <section class="record-sheet">
-            <div class="record-tabs is-three" aria-label="紀錄類型">
+            <div class="record-tabs is-three" aria-label="紀錄類型" *ngIf="!isEditing">
               <button type="button" [class.is-active]="activeEntry === 'injection'" (click)="switchEntry('injection')">
                 施打紀錄
               </button>
@@ -371,6 +387,14 @@ function addDays(date: string, days: number) {
               <button type="button" [class.is-active]="activeEntry === 'weight'" (click)="switchEntry('weight')">
                 體重紀錄
               </button>
+            </div>
+
+            <div class="edit-context" *ngIf="isEditing">
+              <span class="edit-context-icon" aria-hidden="true">✎</span>
+              <div>
+                <strong>編輯{{ entryTypeLabel }}紀錄</strong>
+                <small>儲存後會同步更新歷史紀錄、首頁統計與趨勢圖。</small>
+              </div>
             </div>
 
             <form class="record-form" *ngIf="activeEntry === 'injection'" (submit)="saveInjection($event)">
@@ -454,7 +478,7 @@ function addDays(date: string, days: number) {
                 <div class="form-actions">
                   <button class="secondary-action" type="button" (click)="injectionStep = 1">上一步</button>
                   <button class="coral-action" type="submit" [disabled]="saving === 'injection'">
-                    {{ saving === 'injection' ? '儲存中...' : '確認儲存' }}
+                    {{ saving === 'injection' ? '儲存中...' : (isEditing ? '儲存修改' : '確認儲存') }}
                   </button>
                 </div>
               </div>
@@ -499,9 +523,17 @@ function addDays(date: string, days: number) {
                 <textarea rows="3" maxlength="100" [value]="purchase.note" (input)="setPurchase('note', valueFrom($event))" placeholder="例如：購買地點或品項"></textarea>
               </label>
 
-              <button class="coral-action full-action" type="submit" [disabled]="saving === 'purchase'">
-                {{ saving === 'purchase' ? '儲存中...' : '確認儲存' }}
-              </button>
+              <div class="form-actions" *ngIf="isEditing; else createPurchaseAction">
+                <button class="secondary-action" type="button" (click)="cancelEdit()">取消</button>
+                <button class="coral-action" type="submit" [disabled]="saving === 'purchase'">
+                  {{ saving === 'purchase' ? '儲存中...' : '儲存修改' }}
+                </button>
+              </div>
+              <ng-template #createPurchaseAction>
+                <button class="coral-action full-action" type="submit" [disabled]="saving === 'purchase'">
+                  {{ saving === 'purchase' ? '儲存中...' : '確認儲存' }}
+                </button>
+              </ng-template>
             </form>
 
             <form class="record-form weight-form" *ngIf="activeEntry === 'weight'" (submit)="saveWeight($event)">
@@ -546,9 +578,17 @@ function addDays(date: string, days: number) {
                 <textarea rows="3" maxlength="100" [value]="weight.note" (input)="setWeight('note', valueFrom($event))" placeholder="例如：空腹、飯後或身體狀況"></textarea>
               </label>
 
-              <button class="coral-action full-action" type="submit" [disabled]="saving === 'weight'">
-                {{ saving === 'weight' ? '儲存中...' : '確認儲存' }}
-              </button>
+              <div class="form-actions" *ngIf="isEditing; else createWeightAction">
+                <button class="secondary-action" type="button" (click)="cancelEdit()">取消</button>
+                <button class="coral-action" type="submit" [disabled]="saving === 'weight'">
+                  {{ saving === 'weight' ? '儲存中...' : '儲存修改' }}
+                </button>
+              </div>
+              <ng-template #createWeightAction>
+                <button class="coral-action full-action" type="submit" [disabled]="saving === 'weight'">
+                  {{ saving === 'weight' ? '儲存中...' : '確認儲存' }}
+                </button>
+              </ng-template>
             </form>
           </section>
         </section>
@@ -558,7 +598,7 @@ function addDays(date: string, days: number) {
             <div>
               <span class="section-label">History</span>
               <h1>歷史紀錄</h1>
-              <p>依日期與位置快速查看過去的施打或購買資料。</p>
+              <p>依日期快速查看並編輯過去的施打、購買或體重資料。</p>
             </div>
             <button class="secondary-action refresh-action" type="button" (click)="load()">↻ 重新整理</button>
           </div>
@@ -609,7 +649,10 @@ function addDays(date: string, days: number) {
                   <td data-label="時間">{{ record.injectionTime || '--:--' }}</td>
                   <td data-label="施打部位"><span class="location-badge">{{ placeLabel(record.location) }}</span></td>
                   <td data-label="備註">{{ record.note || '—' }}</td>
-                  <td class="action-cell"><button class="delete-action" type="button" title="刪除" aria-label="刪除施打紀錄" [disabled]="deleting === 'injection-' + record.id" (click)="deleteRecord('injection', record.id)">{{ deleting === 'injection-' + record.id ? '…' : '×' }}</button></td>
+                  <td class="action-cell">
+                    <button class="edit-action" type="button" title="編輯" aria-label="編輯施打紀錄" (click)="openEditRecord('injection', record)">✎</button>
+                    <button class="delete-action" type="button" title="刪除" aria-label="刪除施打紀錄" [disabled]="deleting === 'injection-' + record.id" (click)="deleteRecord('injection', record.id)">{{ deleting === 'injection-' + record.id ? '…' : '×' }}</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -627,7 +670,10 @@ function addDays(date: string, days: number) {
                   <td data-label="次數">{{ record.purchaseCount }}</td>
                   <td data-label="總金額">{{ currency(record.totalAmount) }}</td>
                   <td data-label="備註">{{ record.note || '—' }}</td>
-                  <td class="action-cell"><button class="delete-action" type="button" title="刪除" aria-label="刪除購買紀錄" [disabled]="deleting === 'purchase-' + record.id" (click)="deleteRecord('purchase', record.id)">{{ deleting === 'purchase-' + record.id ? '…' : '×' }}</button></td>
+                  <td class="action-cell">
+                    <button class="edit-action" type="button" title="編輯" aria-label="編輯購買紀錄" (click)="openEditRecord('purchase', record)">✎</button>
+                    <button class="delete-action" type="button" title="刪除" aria-label="刪除購買紀錄" [disabled]="deleting === 'purchase-' + record.id" (click)="deleteRecord('purchase', record.id)">{{ deleting === 'purchase-' + record.id ? '…' : '×' }}</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -645,7 +691,10 @@ function addDays(date: string, days: number) {
                   <td data-label="體重">{{ formatWeight(record.weightKg) }}</td>
                   <td data-label="與前次差異">{{ historyWeightDifference(record) }}</td>
                   <td data-label="備註">{{ record.note || '—' }}</td>
-                  <td class="action-cell"><button class="delete-action" type="button" title="刪除" aria-label="刪除體重紀錄" [disabled]="deleting === 'weight-' + record.id" (click)="deleteRecord('weight', record.id)">{{ deleting === 'weight-' + record.id ? '…' : '×' }}</button></td>
+                  <td class="action-cell">
+                    <button class="edit-action" type="button" title="編輯" aria-label="編輯體重紀錄" (click)="openEditRecord('weight', record)">✎</button>
+                    <button class="delete-action" type="button" title="刪除" aria-label="刪除體重紀錄" [disabled]="deleting === 'weight-' + record.id" (click)="deleteRecord('weight', record.id)">{{ deleting === 'weight-' + record.id ? '…' : '×' }}</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -697,6 +746,8 @@ class TrackerAppComponent implements OnDestroy {
   loading = false;
   saving: EntryTab | "" = "";
   deleting = "";
+  editingType: EntryTab | null = null;
+  editingId: number | null = null;
   highlightedInjectionId: number | null = null;
   message = "";
   messageTone: "success" | "error" = "success";
@@ -712,9 +763,20 @@ class TrackerAppComponent implements OnDestroy {
   }
 
   get entryTitle() {
+    if (this.isEditing) return `編輯${this.entryTypeLabel}`;
     if (this.activeEntry === "purchase") return "記錄購買";
     if (this.activeEntry === "weight") return "記錄體重";
     return "記錄施打";
+  }
+
+  get entryTypeLabel() {
+    if (this.activeEntry === "purchase") return "購買";
+    if (this.activeEntry === "weight") return "體重";
+    return "施打";
+  }
+
+  get isEditing() {
+    return this.editingType === this.activeEntry && this.editingId !== null;
   }
 
   selectProfile(profile: ProfileKey) {
@@ -727,6 +789,7 @@ class TrackerAppComponent implements OnDestroy {
     this.filterLocation = "all";
     this.filterDate = "";
     this.chartRange = "week";
+    this.clearEditing();
     this.highlightedInjectionId = null;
     this.purchase = this.newPurchase();
     this.injection = this.newInjection();
@@ -744,6 +807,7 @@ class TrackerAppComponent implements OnDestroy {
     this.loading = false;
     this.saving = "";
     this.deleting = "";
+    this.clearEditing();
     this.message = "";
     window.scrollTo({ top: 0 });
     this.refreshUi();
@@ -799,9 +863,15 @@ class TrackerAppComponent implements OnDestroy {
   }
 
   get chartRangeCaption() {
-    if (this.chartRange === "month") return "最近 31 天";
-    if (this.chartRange === "year") return "最近 12 個月";
-    return "最近 7 天";
+    const buckets = this.chartBuckets();
+    if (this.chartRange === "month") {
+      const [year, month] = this.localToday.split("-");
+      return `${year}年${Number(month)}月（1日至${buckets.length}日）`;
+    }
+    if (this.chartRange === "year") {
+      return `${this.localToday.slice(0, 4)}年（1月至12月）`;
+    }
+    return `本週 ${buckets[0].fullLabel}至${buckets[buckets.length - 1].fullLabel}`;
   }
 
   get hasChartData() {
@@ -868,6 +938,7 @@ class TrackerAppComponent implements OnDestroy {
   }
 
   setView(view: ViewTab) {
+    this.clearEditing();
     this.activeView = view;
     this.message = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -880,16 +951,78 @@ class TrackerAppComponent implements OnDestroy {
   }
 
   switchEntry(type: EntryTab) {
+    this.clearEditing();
     this.activeEntry = type;
     this.injectionStep = 1;
     this.message = "";
   }
 
   openInjection(location?: LocationKey) {
+    this.clearEditing();
     this.activeEntry = "injection";
     this.injectionStep = 1;
     if (location) this.injection = { ...this.injection, location };
     this.setView("entry");
+  }
+
+  openEditRecord(type: EntryTab, record: EditableRecord) {
+    this.editingType = type;
+    this.editingId = record.id;
+    this.activeEntry = type;
+    this.historyTab = type;
+    this.injectionStep = 1;
+    this.message = "";
+
+    if (type === "injection") {
+      const value = record as InjectionRecord;
+      this.injection = {
+        injectionDate: value.injectionDate,
+        injectionTime: value.injectionTime,
+        location: value.location,
+        nextInjectionDate: value.nextInjectionDate,
+        note: value.note,
+      };
+    } else if (type === "purchase") {
+      const value = record as PurchaseRecord;
+      this.purchase = {
+        purchaseDate: value.purchaseDate,
+        purchaseTime: value.purchaseTime,
+        purchaseCount: String(value.purchaseCount),
+        totalAmount: String(value.totalAmount),
+        note: value.note,
+      };
+    } else {
+      const value = record as WeightRecord;
+      this.weight = {
+        recordDate: value.recordDate,
+        recordTime: value.recordTime,
+        weightKg: String(value.weightKg),
+        note: value.note,
+      };
+    }
+
+    this.activeView = "entry";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    this.refreshUi();
+  }
+
+  closeEntry() {
+    if (this.isEditing) {
+      this.cancelEdit();
+      return;
+    }
+    this.setView("home");
+  }
+
+  cancelEdit() {
+    const type = this.editingType ?? this.historyTab;
+    this.clearEditing();
+    this.resetForm(type);
+    this.activeView = "history";
+    this.historyTab = type;
+    this.message = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    this.refreshUi();
   }
 
   openHistoryRecord(id: number) {
@@ -963,6 +1096,7 @@ class TrackerAppComponent implements OnDestroy {
 
   async savePurchase(event: Event) {
     event.preventDefault();
+    const wasEditing = this.isEditing;
     const saved = await this.save("purchase", {
       type: "purchase",
       ...this.purchase,
@@ -970,37 +1104,29 @@ class TrackerAppComponent implements OnDestroy {
       totalAmount: Number(this.purchase.totalAmount),
     });
     if (saved) {
-      this.purchase = this.newPurchase();
-      this.activeView = "home";
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      this.refreshUi();
+      this.finishSave("purchase", wasEditing);
     }
   }
 
   async saveInjection(event: Event) {
     event.preventDefault();
+    const wasEditing = this.isEditing;
     const saved = await this.save("injection", { type: "injection", ...this.injection });
     if (saved) {
-      this.injection = this.newInjection();
-      this.injectionStep = 1;
-      this.activeView = "home";
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      this.refreshUi();
+      this.finishSave("injection", wasEditing);
     }
   }
 
   async saveWeight(event: Event) {
     event.preventDefault();
+    const wasEditing = this.isEditing;
     const saved = await this.save("weight", {
       type: "weight",
       ...this.weight,
       weightKg: Number(this.weight.weightKg),
     });
     if (saved) {
-      this.weight = this.newWeight();
-      this.activeView = "home";
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      this.refreshUi();
+      this.finishSave("weight", wasEditing);
     }
   }
 
@@ -1010,13 +1136,14 @@ class TrackerAppComponent implements OnDestroy {
       this.showMessage("請先選擇使用者。", "error");
       return false;
     }
+    const editingId = this.editingType === type ? this.editingId : null;
     this.saving = type;
     this.refreshUi();
     try {
       const response = await fetch("/api/records", {
-        method: "POST",
+        method: editingId === null ? "POST" : "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...body, profile }),
+        body: JSON.stringify({ ...body, profile, id: editingId }),
       });
       const payload = (await response.json()) as {
         error?: string;
@@ -1032,7 +1159,12 @@ class TrackerAppComponent implements OnDestroy {
         this.showMessage("紀錄已儲存，但畫面更新失敗，請重新整理。", "error");
         return true;
       }
-      this.showMessage("儲存成功，首頁資料已更新。", "success");
+      this.showMessage(
+        editingId === null
+          ? "儲存成功，首頁資料已更新。"
+          : "修改成功，歷史紀錄與統計已更新。",
+        "success"
+      );
       return true;
     } catch (error) {
       const detail = error instanceof Error ? error.message : "請稍後再試";
@@ -1042,6 +1174,27 @@ class TrackerAppComponent implements OnDestroy {
       this.saving = "";
       this.refreshUi();
     }
+  }
+
+  private finishSave(type: EntryTab, wasEditing: boolean) {
+    this.clearEditing();
+    this.resetForm(type);
+    this.injectionStep = 1;
+    this.activeView = wasEditing ? "history" : "home";
+    if (wasEditing) this.historyTab = type;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    this.refreshUi();
+  }
+
+  private resetForm(type: EntryTab) {
+    if (type === "purchase") this.purchase = this.newPurchase();
+    if (type === "injection") this.injection = this.newInjection();
+    if (type === "weight") this.weight = this.newWeight();
+  }
+
+  private clearEditing() {
+    this.editingType = null;
+    this.editingId = null;
   }
 
   async deleteRecord(type: EntryTab, id: number) {
@@ -1082,17 +1235,65 @@ class TrackerAppComponent implements OnDestroy {
   }
 
   private chartBounds() {
-    const end = new Date(`${this.localToday}T23:59:59`);
-    const start = new Date(`${this.localToday}T00:00:00`);
-    if (this.chartRange === "week") {
-      start.setDate(start.getDate() - 6);
-    } else if (this.chartRange === "month") {
-      start.setDate(start.getDate() - 30);
-    } else {
-      start.setFullYear(start.getFullYear() - 1);
-      start.setDate(start.getDate() + 1);
+    const buckets = this.chartBuckets();
+    return {
+      start: new Date(`${buckets[0].startDate}T00:00:00`).getTime(),
+      end: new Date(`${buckets[buckets.length - 1].endDate}T23:59:59`).getTime(),
+    };
+  }
+
+  private chartBuckets(): ChartBucket[] {
+    const today = new Date(`${this.localToday}T12:00:00`);
+    const year = today.getFullYear();
+    const month = today.getMonth();
+
+    if (this.chartRange === "year") {
+      return Array.from({ length: 12 }, (_, index) => {
+        const start = new Date(year, index, 1, 12);
+        const end = new Date(year, index + 1, 0, 12);
+        return {
+          key: `${year}-${String(index + 1).padStart(2, "0")}`,
+          label: `${index + 1}月`,
+          fullLabel: `${year}年${index + 1}月`,
+          startDate: dateKey(start),
+          endDate: dateKey(end),
+        };
+      });
     }
-    return { start: start.getTime(), end: end.getTime() };
+
+    const start =
+      this.chartRange === "month"
+        ? new Date(year, month, 1, 12)
+        : new Date(year, month, today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1), 12);
+    const count =
+      this.chartRange === "month"
+        ? new Date(year, month + 1, 0, 12).getDate()
+        : 7;
+    const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"];
+
+    return Array.from({ length: count }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const key = dateKey(date);
+      const weekday = weekdayLabels[date.getDay()];
+      return {
+        key,
+        label:
+          this.chartRange === "week"
+            ? `${date.getMonth() + 1}/${date.getDate()}\n${weekday}`
+            : `${date.getDate()}日`,
+        fullLabel:
+          this.chartRange === "week"
+            ? `${date.getMonth() + 1}/${date.getDate()}（${weekday}）`
+            : `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`,
+        startDate: key,
+        endDate: key,
+      };
+    });
+  }
+
+  private chartBucketKey(date: string) {
+    return this.chartRange === "year" ? date.slice(0, 7) : date;
   }
 
   private dateInRange(date: string, start: number, end: number) {
@@ -1136,12 +1337,6 @@ class TrackerAppComponent implements OnDestroy {
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   }
 
-  private formatChartDate(value: number) {
-    const date = new Date(value);
-    if (this.chartRange === "year") return `${date.getMonth() + 1}月`;
-    return `${date.getMonth() + 1}/${date.getDate()}`;
-  }
-
   private scheduleChartRender() {
     if (this.chartRenderTimer) clearTimeout(this.chartRenderTimer);
     if (!this.selectedProfile || this.activeView !== "home") return;
@@ -1167,9 +1362,51 @@ class TrackerAppComponent implements OnDestroy {
     const muted = styles.getPropertyValue("--muted").trim() || "#716e66";
     const surface = styles.getPropertyValue("--surface").trim() || "#ffffff";
     const ink = styles.getPropertyValue("--ink").trim() || "#282722";
-    const { start, end } = this.chartBounds();
+    const buckets = this.chartBuckets();
     const weightRows = this.chartWeightRows();
     const injectionRows = this.chartInjectionRows();
+    const weightByBucket = new Map<string, WeightRecord>();
+    for (const record of weightRows) {
+      weightByBucket.set(this.chartBucketKey(record.recordDate), record);
+    }
+    const injectionsByBucket = new Map<string, InjectionRecord[]>();
+    for (const record of injectionRows) {
+      const key = this.chartBucketKey(record.injectionDate);
+      const group = injectionsByBucket.get(key) ?? [];
+      group.push(record);
+      injectionsByBucket.set(key, group);
+    }
+    const maxInjectionsInBucket = Math.max(
+      0,
+      ...Array.from(injectionsByBucket.values(), (records) => records.length)
+    );
+    const injectionSeries = Array.from({ length: maxInjectionsInBucket }, (_, index) => ({
+      name: index === 0 ? "施打時間" : `施打時間 ${index + 1}`,
+      type: "bar" as const,
+      yAxisIndex: 1,
+      barMaxWidth: this.chartRange === "year" ? 7 : this.chartRange === "month" ? 10 : 18,
+      itemStyle: { color: coral, borderRadius: [3, 3, 0, 0], opacity: 0.72 },
+      data: buckets.map((bucket) => {
+        const record = injectionsByBucket.get(bucket.key)?.[index];
+        return record
+          ? {
+              value: this.timeToHours(record.injectionTime),
+              recordDate: record.injectionDate,
+              recordTime: record.injectionTime,
+            }
+          : null;
+      }),
+    }));
+    const weightSeriesData = buckets.map((bucket) => {
+      const record = weightByBucket.get(bucket.key);
+      return record
+        ? {
+            value: record.weightKg,
+            recordDate: record.recordDate,
+            recordTime: record.recordTime,
+          }
+        : null;
+    });
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     this.chart?.setOption(
@@ -1177,7 +1414,7 @@ class TrackerAppComponent implements OnDestroy {
         animation: !reduceMotion,
         animationDuration: 380,
         backgroundColor: "transparent",
-        grid: { top: 28, right: 54, bottom: 44, left: 50 },
+        grid: { top: 28, right: 54, bottom: this.chartRange === "week" ? 54 : 44, left: 50 },
         tooltip: {
           trigger: "axis",
           backgroundColor: surface,
@@ -1191,34 +1428,49 @@ class TrackerAppComponent implements OnDestroy {
                   marker: string;
                   seriesName: string;
                   value: unknown;
+                  dataIndex: number;
+                  data?: { value?: number; recordDate?: string; recordTime?: string } | number;
                 }>)
               : [];
             if (!items.length) return "";
-            const date = new Date(Number(items[0].axisValue));
-            const heading = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+            const heading = buckets[items[0].dataIndex]?.fullLabel ?? String(items[0].axisValue);
             const rows = items.map((item) => {
-              const raw = Array.isArray(item.value) ? Number(item.value[1]) : Number(item.value);
-              const value = item.seriesName === "體重"
+              const raw =
+                typeof item.data === "object" && item.data !== null
+                  ? Number(item.data.value)
+                  : Number(item.value);
+              const isWeight = item.seriesName === "體重";
+              const value = isWeight
                 ? `${raw.toFixed(1)} kg`
                 : this.formatChartTime(raw);
-              return `${item.marker}${item.seriesName}：${value}`;
+              const label = isWeight ? "體重" : "施打時間";
+              const dateDetail =
+                this.chartRange === "year" &&
+                typeof item.data === "object" &&
+                item.data?.recordDate
+                  ? `（${item.data.recordDate.slice(5).replace("-", "/")}）`
+                  : "";
+              return `${item.marker}${label}${dateDetail}：${value}`;
             });
             return `<strong>${heading}</strong><br>${rows.join("<br>")}`;
           },
         },
         xAxis: {
-          type: "time",
-          min: start,
-          max: end,
-          boundaryGap: [0.03, 0.03],
+          type: "category",
+          data: buckets.map((bucket) => bucket.label),
+          boundaryGap: true,
           axisLine: { lineStyle: { color: line } },
-          axisTick: { show: false },
+          axisTick: { show: false, alignWithLabel: true },
           splitLine: { show: false },
           axisLabel: {
             color: muted,
             fontSize: 11,
             hideOverlap: true,
-            formatter: (value: number) => this.formatChartDate(value),
+            interval:
+              this.chartRange === "month"
+                ? (index: number) =>
+                    index === 0 || index === buckets.length - 1 || (index + 1) % 5 === 0
+                : 0,
           },
         },
         yAxis: [
@@ -1252,17 +1504,7 @@ class TrackerAppComponent implements OnDestroy {
           },
         ],
         series: [
-          {
-            name: "施打時間",
-            type: "bar",
-            yAxisIndex: 1,
-            barWidth: this.chartRange === "year" ? 4 : this.chartRange === "month" ? 8 : 14,
-            itemStyle: { color: coral, borderRadius: [3, 3, 0, 0], opacity: 0.72 },
-            data: injectionRows.map((record) => [
-              new Date(`${record.injectionDate}T12:00:00`).getTime(),
-              this.timeToHours(record.injectionTime),
-            ]),
-          },
+          ...injectionSeries,
           {
             name: "體重",
             type: "line",
@@ -1270,12 +1512,10 @@ class TrackerAppComponent implements OnDestroy {
             smooth: 0.25,
             symbol: "circle",
             symbolSize: 7,
+            connectNulls: true,
             lineStyle: { color: teal, width: 3 },
             itemStyle: { color: surface, borderColor: teal, borderWidth: 3 },
-            data: weightRows.map((record) => [
-              new Date(`${record.recordDate}T${record.recordTime || "12:00"}:00`).getTime(),
-              record.weightKg,
-            ]),
+            data: weightSeriesData,
           },
         ],
       },
