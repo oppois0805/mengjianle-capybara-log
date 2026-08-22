@@ -3,6 +3,7 @@ export async function GET(request: Request) {
   const title = "猛健樂卡皮巴拉紀錄";
   const description = "記錄猛健樂購買時間、次數、金額，以及腹部四象限施打位置。";
   const socialImage = `${origin}/og.png`;
+  const assetVersion = "20260822-mobile-picker";
 
   const html = `<!doctype html>
 <html lang="zh-Hant">
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="${socialImage}">
-    <link rel="stylesheet" href="/mounjaro-app.css">
+    <link rel="stylesheet" href="/mounjaro-app.css?v=${assetVersion}">
   </head>
   <body>
     <main class="page-shell">
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
         </section>
       </mounjaro-tracker>
     </main>
-    <script src="/mounjaro-app.js" defer></script>
+    <script src="/mounjaro-app.js?v=${assetVersion}" defer></script>
   </body>
 </html>`;
 
