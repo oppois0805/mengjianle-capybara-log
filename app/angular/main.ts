@@ -185,6 +185,18 @@ function dateKey(value: Date) {
       [class.profile-wenwen]="selectedProfile === 'wenwen'"
       [class.profile-haohao]="selectedProfile === 'haohao'"
     >
+      <div
+        class="loading-overlay"
+        *ngIf="loading"
+        role="status"
+        aria-live="polite"
+        aria-label="正在讀取資料"
+      >
+        <div class="loading-capybara">
+          <img class="loading-capybara-head" [src]="currentProfile.avatar" alt="" />
+          <strong>讀取{{ currentProfile.name }}的紀錄中</strong>
+        </div>
+      </div>
       <aside class="side-nav" aria-label="桌面導覽">
         <button class="brand-block profile-switch" type="button" (click)="showProfilePicker()" [attr.aria-label]="'切換使用者，目前是' + currentProfile.name">
           <img [src]="currentProfile.avatar" alt="" class="brand-avatar" />
@@ -219,8 +231,6 @@ function dateKey(value: Date) {
             <strong>{{ currentProfile.name }}的紀錄</strong>
           </button>
         </header>
-
-        <div class="loading-bar" *ngIf="loading" aria-label="正在更新資料"></div>
 
         <p
           class="toast"
@@ -725,6 +735,7 @@ class TrackerAppComponent implements OnDestroy {
   private chart: ReturnType<typeof echarts.init> | null = null;
   private chartElement: HTMLElement | null = null;
   private chartResizeObserver: ResizeObserver | null = null;
+  private loadSequence = 0;
   readonly localToday = localDate();
   readonly profiles = profileOptions;
   readonly locationOptions = [
@@ -802,6 +813,7 @@ class TrackerAppComponent implements OnDestroy {
 
   showProfilePicker() {
     this.disposeChart();
+    this.loadSequence += 1;
     this.selectedProfile = null;
     this.data = emptyData;
     this.loading = false;
@@ -1070,6 +1082,8 @@ class TrackerAppComponent implements OnDestroy {
   async load() {
     const profile = this.selectedProfile;
     if (!profile) return false;
+    const sequence = ++this.loadSequence;
+    const loadingStartedAt = Date.now();
     this.loading = true;
     this.refreshUi();
     try {
@@ -1089,8 +1103,14 @@ class TrackerAppComponent implements OnDestroy {
       this.showMessage(error instanceof Error ? error.message : "讀取紀錄失敗", "error");
       return false;
     } finally {
-      this.loading = false;
-      this.refreshUi();
+      const remaining = 480 - (Date.now() - loadingStartedAt);
+      if (remaining > 0) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, remaining));
+      }
+      if (sequence === this.loadSequence) {
+        this.loading = false;
+        this.refreshUi();
+      }
     }
   }
 
@@ -1433,12 +1453,19 @@ class TrackerAppComponent implements OnDestroy {
                 }>)
               : [];
             if (!items.length) return "";
-            const heading = buckets[items[0].dataIndex]?.fullLabel ?? String(items[0].axisValue);
-            const rows = items.map((item) => {
+            const validItems: Array<{ item: (typeof items)[number]; raw: number }> = [];
+            items.forEach((item) => {
               const raw =
                 typeof item.data === "object" && item.data !== null
                   ? Number(item.data.value)
                   : Number(item.value);
+              if (Number.isFinite(raw)) validItems.push({ item, raw });
+            });
+            if (!validItems.length) return "";
+            const heading =
+              buckets[validItems[0].item.dataIndex]?.fullLabel ??
+              String(validItems[0].item.axisValue);
+            const rows = validItems.map(({ item, raw }) => {
               const isWeight = item.seriesName === "體重";
               const value = isWeight
                 ? `${raw.toFixed(1)} kg`

@@ -32,15 +32,16 @@ test("renders the finished tracker shell", async () => {
   assert.match(html, /<title>猛健樂卡皮巴拉紀錄<\/title>/);
   assert.match(html, /<mounjaro-tracker>/);
   assert.match(html, /\/mounjaro-app\.js/);
-  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260822-calendar-editing/);
+  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260822-loading-tooltip/);
   assert.match(html, /\/og\.png/);
   assert.doesNotMatch(html, /codex-preview|_sites-preview|Starter Project/);
 });
 
 test("includes the Angular client and capybara assets", async () => {
-  const [client, source, api, schema] = await Promise.all([
+  const [client, source, styles, api, schema] = await Promise.all([
     readFile(new URL("../public/mounjaro-app.js", import.meta.url), "utf8"),
     readFile(new URL("../app/angular/main.ts", import.meta.url), "utf8"),
+    readFile(new URL("../public/mounjaro-app.css", import.meta.url), "utf8"),
     readFile(new URL("../app/api/records/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     access(new URL("../public/capybara-hero.png", import.meta.url)),
@@ -69,6 +70,13 @@ test("includes the Angular client and capybara assets", async () => {
   assert.match(source, /today\.getDay\(\) === 0 \? 6 : today\.getDay\(\) - 1/);
   assert.match(source, /new Date\(year, month \+ 1, 0, 12\)\.getDate\(\)/);
   assert.match(source, /Array\.from\(\{ length: 12 \}/);
+  assert.match(source, /class="loading-overlay"/);
+  assert.match(source, /Number\.isFinite\(raw\)/);
+  assert.match(source, /if \(!validItems\.length\) return ""/);
+  assert.match(styles, /\.profile-wenwen \.loading-overlay/);
+  assert.match(styles, /\.profile-haohao \.loading-overlay/);
+  assert.match(styles, /animation: capybara-loading-spin/);
+  assert.match(styles, /transform: translateY\(-50%\)/);
   assert.match(client, /echarts/);
   assert.match(api, /export async function PATCH/);
   assert.match(api, /type === "weight"/);

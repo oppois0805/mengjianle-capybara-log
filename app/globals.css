@@ -155,14 +155,50 @@ p {
   font-weight: 700;
 }
 
-.loading-bar {
+.loading-overlay {
   position: fixed;
-  z-index: 20;
-  top: 0;
-  left: 0;
-  width: 38%;
-  height: 3px;
-  background: var(--coral);
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(255, 235, 242, 0.94);
+  backdrop-filter: blur(2px);
+}
+
+.profile-wenwen .loading-overlay {
+  background: rgba(255, 235, 242, 0.94);
+}
+
+.profile-haohao .loading-overlay {
+  background: rgba(227, 243, 252, 0.94);
+}
+
+.loading-capybara {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  color: var(--ink);
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.loading-capybara-head {
+  width: 92px;
+  height: 92px;
+  border: 6px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: 0 10px 28px rgba(72, 65, 57, 0.14);
+  object-fit: cover;
+  object-position: 50% 44%;
+  animation: capybara-loading-spin 1.15s linear infinite;
+}
+
+@keyframes capybara-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .toast {
@@ -2031,20 +2067,24 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .entry-view .page-head {
   position: relative;
   min-height: 86px;
+  align-items: center;
   justify-content: center;
   margin: 0;
+  padding: 0 62px;
   border-bottom: 1px solid var(--line);
   text-align: center;
 }
 
 .entry-view .page-head h1 {
+  margin: 0;
   font-size: 1.32rem;
+  line-height: 1.2;
 }
 
 .entry-close {
   position: absolute;
-  top: 25px;
-  left: 10px;
+  top: 50%;
+  left: 8px;
   display: grid;
   width: 48px;
   height: 48px;
@@ -2055,6 +2095,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   font-size: 2rem;
   line-height: 1;
+  transform: translateY(-50%);
 }
 
 .record-sheet {
@@ -2489,6 +2530,7 @@ select {
   .entry-view .page-head {
     min-height: auto;
     justify-content: flex-start;
+    padding: 0;
     margin-bottom: 16px;
     border-bottom: 0;
     text-align: left;
