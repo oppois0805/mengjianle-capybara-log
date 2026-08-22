@@ -322,17 +322,29 @@ function addDays(date: string, days: number) {
                 <div class="field-row date-time-row">
                   <label>
                     <span>施打日期</span>
-                    <input type="date" [value]="injection.injectionDate" (input)="setInjection('injectionDate', valueFrom($event))" required />
+                    <span class="native-picker">
+                      <span class="native-picker-value" aria-hidden="true">{{ pickerDate(injection.injectionDate) }}</span>
+                      <span class="native-picker-icon is-date" aria-hidden="true"></span>
+                      <input class="native-picker-input" type="date" [value]="injection.injectionDate" (input)="setInjection('injectionDate', valueFrom($event))" required />
+                    </span>
                   </label>
                   <label>
                     <span>施打時間</span>
-                    <input type="time" [value]="injection.injectionTime" (input)="setInjection('injectionTime', valueFrom($event))" />
+                    <span class="native-picker">
+                      <span class="native-picker-value" aria-hidden="true">{{ injection.injectionTime || '--:--' }}</span>
+                      <span class="native-picker-icon is-time" aria-hidden="true"></span>
+                      <input class="native-picker-input" type="time" [value]="injection.injectionTime" (input)="setInjection('injectionTime', valueFrom($event))" />
+                    </span>
                   </label>
                 </div>
 
                 <label>
                   <span>下次施打日期</span>
-                  <input type="date" [value]="injection.nextInjectionDate" (input)="setInjection('nextInjectionDate', valueFrom($event))" />
+                  <span class="native-picker">
+                    <span class="native-picker-value" aria-hidden="true">{{ pickerDate(injection.nextInjectionDate) }}</span>
+                    <span class="native-picker-icon is-date" aria-hidden="true"></span>
+                    <input class="native-picker-input" type="date" [value]="injection.nextInjectionDate" (input)="setInjection('nextInjectionDate', valueFrom($event))" />
+                  </span>
                   <small class="field-help">預設為施打日期後 7 天，可自行調整。</small>
                 </label>
 
@@ -390,11 +402,19 @@ function addDays(date: string, days: number) {
               <div class="field-row date-time-row">
                 <label>
                   <span>購買日期</span>
-                  <input type="date" [value]="purchase.purchaseDate" (input)="setPurchase('purchaseDate', valueFrom($event))" required />
+                  <span class="native-picker">
+                    <span class="native-picker-value" aria-hidden="true">{{ pickerDate(purchase.purchaseDate) }}</span>
+                    <span class="native-picker-icon is-date" aria-hidden="true"></span>
+                    <input class="native-picker-input" type="date" [value]="purchase.purchaseDate" (input)="setPurchase('purchaseDate', valueFrom($event))" required />
+                  </span>
                 </label>
                 <label>
                   <span>購買時間</span>
-                  <input type="time" [value]="purchase.purchaseTime" (input)="setPurchase('purchaseTime', valueFrom($event))" />
+                  <span class="native-picker">
+                    <span class="native-picker-value" aria-hidden="true">{{ purchase.purchaseTime || '--:--' }}</span>
+                    <span class="native-picker-icon is-time" aria-hidden="true"></span>
+                    <input class="native-picker-input" type="time" [value]="purchase.purchaseTime" (input)="setPurchase('purchaseTime', valueFrom($event))" />
+                  </span>
                 </label>
               </div>
 
@@ -446,14 +466,16 @@ function addDays(date: string, days: number) {
               </label>
               <label class="date-filter">
                 <span>日期</span>
-                <span class="date-input-wrap" [class.is-empty]="!filterDate">
+                <span class="date-input-wrap native-picker" [class.is-empty]="!filterDate">
+                  <span class="native-picker-value" aria-hidden="true">{{ filterDate ? pickerDate(filterDate) : '全部日期' }}</span>
+                  <span class="native-picker-icon is-date" aria-hidden="true"></span>
                   <input
+                    class="native-picker-input"
                     type="date"
                     [value]="filterDate"
                     (input)="filterDate = valueFrom($event)"
                     aria-label="依日期篩選；未選擇時顯示全部日期"
                   />
-                  <span class="date-empty-label" *ngIf="!filterDate" aria-hidden="true">全部日期</span>
                 </span>
               </label>
             </div>
@@ -629,6 +651,10 @@ class TrackerAppComponent {
     if (!date) return "尚未設定";
     const [year, month, day] = date.split("-");
     return `${year}年${Number(month)}月${Number(day)}日`;
+  }
+
+  pickerDate(date: string | null | undefined) {
+    return date ? date.replaceAll("-", "/") : "--/--/--";
   }
 
   currency(value: number) {

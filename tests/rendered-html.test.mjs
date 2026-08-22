@@ -55,4 +55,6 @@ test("includes the Angular client and capybara assets", async () => {
   assert.match(source, /右下腹/);
   assert.match(source, /今天是誰使用/);
   assert.match(source, /profile=\$\{profile\}/);
+  assert.match(source, /native-picker-input/);
+  assert.match(source, /pickerDate/);
 });
