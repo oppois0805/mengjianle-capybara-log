@@ -45,7 +45,10 @@ test("includes the Angular client and capybara assets", async () => {
   ]);
   assert.match(client, /mounjaro-tracker/);
   assert.match(client, /\/api\/records/);
-  assert.match(source, /猛健樂卡皮巴拉紀錄/);
+  assert.match(source, /猛健樂紀錄/);
+  assert.match(source, /下次施打/);
+  assert.match(source, /總施打次數/);
+  assert.match(source, /確認儲存/);
   assert.match(source, /左上腹/);
   assert.match(source, /右下腹/);
 });

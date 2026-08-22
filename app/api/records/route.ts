@@ -81,6 +81,12 @@ export async function GET() {
       .orderBy(desc(injections.injectionDate), desc(injections.id))
       .limit(120);
 
+    const [injectionTotals] = await db
+      .select({
+        injectionRecordsCount: sql<number>`count(*)`,
+      })
+      .from(injections);
+
     const lastInjection = injectionRows[0] ?? null;
     const nextInjectionDate =
       lastInjection?.nextInjectionDate ||
@@ -91,6 +97,9 @@ export async function GET() {
         totalSpent: Number(totals?.totalSpent ?? 0),
         totalPurchaseCount: Number(totals?.totalPurchaseCount ?? 0),
         purchaseRecordsCount: Number(totals?.purchaseRecordsCount ?? 0),
+        injectionRecordsCount: Number(
+          injectionTotals?.injectionRecordsCount ?? 0
+        ),
         lastInjection,
         lastLocation: lastInjection?.location ?? null,
         nextInjectionDate: nextInjectionDate || null,
