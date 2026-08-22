@@ -1,7 +1,7 @@
 import "zone.js";
 import "@angular/compiler";
 import { CommonModule } from "@angular/common";
-import { Component } from "@angular/core";
+import { ChangeDetectorRef, Component, inject } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";
 
 type EntryTab = "injection" | "purchase";
@@ -94,10 +94,10 @@ function addDays(date: string, days: number) {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <section class="tracker-app">
+    <section class="tracker-app" [class.is-entry-mode]="activeView === 'entry'">
       <aside class="side-nav" aria-label="桌面導覽">
         <div class="brand-block">
-          <img src="/capybara-hero.png" alt="" class="brand-avatar" />
+          <img src="/capybara-avatar-v2.png" alt="" class="brand-avatar" />
           <div>
             <strong>猛健樂紀錄</strong>
             <span>Capybara Log</span>
@@ -106,15 +106,15 @@ function addDays(date: string, days: number) {
 
         <nav class="side-links">
           <button type="button" [class.is-active]="activeView === 'home'" (click)="setView('home')">
-            <span class="nav-symbol" aria-hidden="true">⌂</span>
+            <span class="nav-symbol home-symbol" aria-hidden="true"></span>
             首頁
           </button>
           <button type="button" [class.is-active]="activeView === 'entry'" (click)="setView('entry')">
-            <span class="nav-symbol" aria-hidden="true">＋</span>
+            <span class="nav-symbol add-symbol" aria-hidden="true"></span>
             新增紀錄
           </button>
           <button type="button" [class.is-active]="activeView === 'history'" (click)="setView('history')">
-            <span class="nav-symbol" aria-hidden="true">◷</span>
+            <span class="nav-symbol history-symbol" aria-hidden="true"></span>
             歷史
           </button>
         </nav>
@@ -125,10 +125,12 @@ function addDays(date: string, days: number) {
       <main class="workspace">
         <header class="mobile-topbar">
           <div class="mobile-brand">
-            <img src="/capybara-hero.png" alt="" class="brand-avatar" />
+            <img src="/capybara-avatar-v2.png" alt="" class="brand-avatar" />
             <strong>猛健樂紀錄</strong>
           </div>
-          <span class="today-label">{{ formatDate(localToday) }}</span>
+          <button class="notification-button" type="button" aria-label="提醒">
+            <span class="bell-icon" aria-hidden="true"></span>
+          </button>
         </header>
 
         <div class="loading-bar" *ngIf="loading" aria-label="正在更新資料"></div>
@@ -153,7 +155,7 @@ function addDays(date: string, days: number) {
               </div>
             </div>
             <button class="coral-action due-action" type="button" (click)="openInjection()">
-              記錄施打
+              <span aria-hidden="true">💉</span> 記錄施打
             </button>
           </section>
 
@@ -179,7 +181,6 @@ function addDays(date: string, days: number) {
             <section class="history-preview section-frame">
               <div class="section-head">
                 <div>
-                  <span class="section-label">Recent</span>
                   <h2>最近紀錄</h2>
                 </div>
                 <button class="text-action" type="button" (click)="setView('history')">查看全部</button>
@@ -191,13 +192,16 @@ function addDays(date: string, days: number) {
               </div>
 
               <div class="recent-list" *ngIf="recentInjections.length">
+                <div class="recent-table-head" aria-hidden="true">
+                  <span></span><span>日期</span><span>時間</span><span>施打部位</span><span>備註</span>
+                </div>
                 <article class="recent-row" *ngFor="let record of recentInjections; let first = first">
                   <span class="timeline-dot" [class.is-current]="first" aria-hidden="true">✓</span>
-                  <div>
-                    <strong>{{ formatDate(record.injectionDate) }}</strong>
-                    <small>{{ record.injectionTime || '--:--' }}</small>
-                  </div>
+                  <strong class="row-date">{{ formatDate(record.injectionDate) }}</strong>
+                  <small class="row-time">{{ record.injectionTime || '--:--' }}</small>
                   <span class="row-location">{{ placeLabel(record.location) }}</span>
+                  <span class="row-note">{{ record.note || '—' }}</span>
+                  <span class="row-chevron" aria-hidden="true">›</span>
                 </article>
               </div>
             </section>
@@ -205,7 +209,6 @@ function addDays(date: string, days: number) {
             <section class="rotation-panel section-frame">
               <div class="section-head">
                 <div>
-                  <span class="section-label">Rotation</span>
                   <h2>施打部位輪替</h2>
                 </div>
               </div>
@@ -242,10 +245,9 @@ function addDays(date: string, days: number) {
 
         <section class="view entry-view" *ngIf="activeView === 'entry'">
           <div class="page-head">
+            <button class="entry-close" type="button" aria-label="返回首頁" (click)="setView('home')">‹</button>
             <div>
-              <span class="section-label">New Record</span>
-              <h1>新增紀錄</h1>
-              <p>選擇要記錄施打或購買，完成後首頁會立即更新。</p>
+              <h1>{{ activeEntry === 'injection' ? '記錄施打' : '記錄購買' }}</h1>
             </div>
           </div>
 
@@ -260,8 +262,8 @@ function addDays(date: string, days: number) {
             </div>
 
             <form class="record-form" *ngIf="activeEntry === 'injection'" (submit)="saveInjection($event)">
-              <div class="step-head">
-                <h2>記錄施打</h2>
+              <div class="step-head injection-step-head">
+                <h2 class="sr-only">記錄施打</h2>
                 <div class="stepper" aria-label="施打紀錄步驟">
                   <span [class.is-active]="injectionStep >= 1">1</span>
                   <i></i>
@@ -413,7 +415,7 @@ function addDays(date: string, days: number) {
                   <td data-label="時間">{{ record.injectionTime || '--:--' }}</td>
                   <td data-label="施打部位"><span class="location-badge">{{ placeLabel(record.location) }}</span></td>
                   <td data-label="備註">{{ record.note || '—' }}</td>
-                  <td class="action-cell"><button class="delete-action" type="button" title="刪除" aria-label="刪除施打紀錄" (click)="deleteRecord('injection', record.id)">×</button></td>
+                  <td class="action-cell"><button class="delete-action" type="button" title="刪除" aria-label="刪除施打紀錄" [disabled]="deleting === 'injection-' + record.id" (click)="deleteRecord('injection', record.id)">{{ deleting === 'injection-' + record.id ? '…' : '×' }}</button></td>
                 </tr>
               </tbody>
             </table>
@@ -431,7 +433,7 @@ function addDays(date: string, days: number) {
                   <td data-label="次數">{{ record.purchaseCount }}</td>
                   <td data-label="總金額">{{ currency(record.totalAmount) }}</td>
                   <td data-label="備註">{{ record.note || '—' }}</td>
-                  <td class="action-cell"><button class="delete-action" type="button" title="刪除" aria-label="刪除購買紀錄" (click)="deleteRecord('purchase', record.id)">×</button></td>
+                  <td class="action-cell"><button class="delete-action" type="button" title="刪除" aria-label="刪除購買紀錄" [disabled]="deleting === 'purchase-' + record.id" (click)="deleteRecord('purchase', record.id)">{{ deleting === 'purchase-' + record.id ? '…' : '×' }}</button></td>
                 </tr>
               </tbody>
             </table>
@@ -443,19 +445,21 @@ function addDays(date: string, days: number) {
 
       <nav class="bottom-nav" aria-label="主要功能">
         <button type="button" [class.is-active]="activeView === 'home'" (click)="setView('home')">
-          <span aria-hidden="true">⌂</span>首頁
+          <span class="home-symbol" aria-hidden="true"></span>首頁
         </button>
         <button type="button" [class.is-active]="activeView === 'entry'" (click)="setView('entry')">
-          <span aria-hidden="true">＋</span>紀錄
+          <span class="add-symbol" aria-hidden="true"></span>紀錄
         </button>
         <button type="button" [class.is-active]="activeView === 'history'" (click)="setView('history')">
-          <span aria-hidden="true">◷</span>歷史
+          <span class="history-symbol" aria-hidden="true"></span>歷史
         </button>
       </nav>
     </section>
   `,
 })
 class TrackerAppComponent {
+  private readonly cdr = inject(ChangeDetectorRef);
+  private messageTimer: ReturnType<typeof setTimeout> | null = null;
   readonly localToday = localDate();
   readonly locationOptions = [
     { key: "upper_left" as const, label: locationLabels.upper_left },
@@ -473,6 +477,7 @@ class TrackerAppComponent {
   filterDate = "";
   loading = true;
   saving: EntryTab | "" = "";
+  deleting = "";
   message = "";
   messageTone: "success" | "error" = "success";
   purchase = this.newPurchase();
@@ -584,8 +589,9 @@ class TrackerAppComponent {
 
   async load() {
     this.loading = true;
+    this.refreshUi();
     try {
-      const response = await fetch("/api/records");
+      const response = await fetch("/api/records", { cache: "no-store" });
       const payload = (await response.json()) as TrackerData & { error?: string };
       if (!response.ok) throw new Error(payload.error || "讀取紀錄失敗");
       this.data = payload;
@@ -595,10 +601,13 @@ class TrackerAppComponent {
           location: this.suggestedLocation || "upper_left",
         };
       }
+      return true;
     } catch (error) {
       this.showMessage(error instanceof Error ? error.message : "讀取紀錄失敗", "error");
+      return false;
     } finally {
       this.loading = false;
+      this.refreshUi();
     }
   }
 
@@ -613,6 +622,8 @@ class TrackerAppComponent {
     if (saved) {
       this.purchase = this.newPurchase();
       this.activeView = "home";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      this.refreshUi();
     }
   }
 
@@ -623,46 +634,86 @@ class TrackerAppComponent {
       this.injection = this.newInjection();
       this.injectionStep = 1;
       this.activeView = "home";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      this.refreshUi();
     }
   }
 
   async save(type: EntryTab, body: Record<string, unknown>) {
     this.saving = type;
+    this.refreshUi();
     try {
       const response = await fetch("/api/records", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      const payload = (await response.json()) as { error?: string } & Record<string, unknown>;
+      const payload = (await response.json()) as {
+        error?: string;
+        data?: TrackerData;
+      } & Record<string, unknown>;
       if (!response.ok) throw new Error(payload.error || "儲存失敗");
-      await this.load();
-      this.showMessage("已儲存紀錄", "success");
+      if (payload.data) {
+        this.data = payload.data;
+        this.loading = false;
+        this.refreshUi();
+      } else if (!(await this.load())) {
+        this.showMessage("紀錄已儲存，但畫面更新失敗，請重新整理。", "error");
+        return true;
+      }
+      this.showMessage("儲存成功，首頁資料已更新。", "success");
       return true;
     } catch (error) {
-      this.showMessage(error instanceof Error ? error.message : "儲存失敗", "error");
+      const detail = error instanceof Error ? error.message : "請稍後再試";
+      this.showMessage(`儲存失敗：${detail}`, "error");
       return false;
     } finally {
       this.saving = "";
+      this.refreshUi();
     }
   }
 
   async deleteRecord(type: EntryTab, id: number) {
     if (!window.confirm("確定要刪除這筆紀錄嗎？")) return;
+    this.deleting = `${type}-${id}`;
+    this.refreshUi();
     try {
       const response = await fetch(`/api/records?type=${type}&id=${id}`, { method: "DELETE" });
-      const payload = (await response.json()) as { error?: string } & Record<string, unknown>;
+      const payload = (await response.json()) as {
+        error?: string;
+        data?: TrackerData;
+      } & Record<string, unknown>;
       if (!response.ok) throw new Error(payload.error || "刪除失敗");
-      await this.load();
-      this.showMessage("已刪除紀錄", "success");
+      if (payload.data) {
+        this.data = payload.data;
+        this.loading = false;
+        this.refreshUi();
+      } else if (!(await this.load())) {
+        return;
+      }
+      this.showMessage("刪除成功，紀錄與統計已更新。", "success");
     } catch (error) {
-      this.showMessage(error instanceof Error ? error.message : "刪除失敗", "error");
+      const detail = error instanceof Error ? error.message : "請稍後再試";
+      this.showMessage(`刪除失敗：${detail}`, "error");
+    } finally {
+      this.deleting = "";
+      this.refreshUi();
     }
   }
 
   showMessage(message: string, tone: "success" | "error") {
+    if (this.messageTimer) clearTimeout(this.messageTimer);
     this.message = message;
     this.messageTone = tone;
+    this.refreshUi();
+    this.messageTimer = setTimeout(() => {
+      this.message = "";
+      this.refreshUi();
+    }, 3600);
+  }
+
+  private refreshUi() {
+    setTimeout(() => this.cdr.detectChanges(), 0);
   }
 
   private newPurchase() {

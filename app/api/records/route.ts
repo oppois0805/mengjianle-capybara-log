@@ -57,56 +57,61 @@ function routeError(error: unknown) {
   return message;
 }
 
+async function readTrackerData(db: ReturnType<typeof getDb>) {
+  const [totals] = await db
+    .select({
+      totalSpent: sql<number>`coalesce(sum(${purchases.totalAmount}), 0)`,
+      totalPurchaseCount: sql<number>`coalesce(sum(${purchases.purchaseCount}), 0)`,
+      purchaseRecordsCount: sql<number>`count(*)`,
+    })
+    .from(purchases);
+
+  const purchaseRows = await db
+    .select()
+    .from(purchases)
+    .orderBy(desc(purchases.purchaseDate), desc(purchases.id))
+    .limit(80);
+
+  const injectionRows = await db
+    .select()
+    .from(injections)
+    .orderBy(desc(injections.injectionDate), desc(injections.id))
+    .limit(120);
+
+  const [injectionTotals] = await db
+    .select({
+      injectionRecordsCount: sql<number>`count(*)`,
+    })
+    .from(injections);
+
+  const lastInjection = injectionRows[0] ?? null;
+  const nextInjectionDate =
+    lastInjection?.nextInjectionDate ||
+    addDays(lastInjection?.injectionDate ?? "", 7);
+
+  return {
+    summary: {
+      totalSpent: Number(totals?.totalSpent ?? 0),
+      totalPurchaseCount: Number(totals?.totalPurchaseCount ?? 0),
+      purchaseRecordsCount: Number(totals?.purchaseRecordsCount ?? 0),
+      injectionRecordsCount: Number(injectionTotals?.injectionRecordsCount ?? 0),
+      lastInjection,
+      lastLocation: lastInjection?.location ?? null,
+      nextInjectionDate: nextInjectionDate || null,
+    },
+    purchases: purchaseRows,
+    injections: injectionRows,
+  };
+}
+
 export async function GET() {
   try {
     await ensureDbSchema();
     const db = getDb();
-    const [totals] = await db
-      .select({
-        totalSpent: sql<number>`coalesce(sum(${purchases.totalAmount}), 0)`,
-        totalPurchaseCount: sql<number>`coalesce(sum(${purchases.purchaseCount}), 0)`,
-        purchaseRecordsCount: sql<number>`count(*)`,
-      })
-      .from(purchases);
-
-    const purchaseRows = await db
-      .select()
-      .from(purchases)
-      .orderBy(desc(purchases.purchaseDate), desc(purchases.id))
-      .limit(80);
-
-    const injectionRows = await db
-      .select()
-      .from(injections)
-      .orderBy(desc(injections.injectionDate), desc(injections.id))
-      .limit(120);
-
-    const [injectionTotals] = await db
-      .select({
-        injectionRecordsCount: sql<number>`count(*)`,
-      })
-      .from(injections);
-
-    const lastInjection = injectionRows[0] ?? null;
-    const nextInjectionDate =
-      lastInjection?.nextInjectionDate ||
-      addDays(lastInjection?.injectionDate ?? "", 7);
-
-    return Response.json({
-      summary: {
-        totalSpent: Number(totals?.totalSpent ?? 0),
-        totalPurchaseCount: Number(totals?.totalPurchaseCount ?? 0),
-        purchaseRecordsCount: Number(totals?.purchaseRecordsCount ?? 0),
-        injectionRecordsCount: Number(
-          injectionTotals?.injectionRecordsCount ?? 0
-        ),
-        lastInjection,
-        lastLocation: lastInjection?.location ?? null,
-        nextInjectionDate: nextInjectionDate || null,
-      },
-      purchases: purchaseRows,
-      injections: injectionRows,
-    });
+    return Response.json(
+      await readTrackerData(db),
+      { headers: { "cache-control": "no-store, max-age=0" } }
+    );
   } catch (error) {
     return Response.json({ error: routeError(error) }, { status: 500 });
   }
@@ -142,7 +147,10 @@ export async function POST(request: Request) {
           note: toText(payload.note),
         })
         .returning();
-      return Response.json({ record }, { status: 201 });
+      return Response.json(
+        { record, data: await readTrackerData(db) },
+        { status: 201, headers: { "cache-control": "no-store, max-age=0" } }
+      );
     }
 
     if (type === "injection") {
@@ -169,7 +177,10 @@ export async function POST(request: Request) {
           note: toText(payload.note),
         })
         .returning();
-      return Response.json({ record }, { status: 201 });
+      return Response.json(
+        { record, data: await readTrackerData(db) },
+        { status: 201, headers: { "cache-control": "no-store, max-age=0" } }
+      );
     }
 
     return Response.json({ error: "不支援的紀錄類型。" }, { status: 400 });
@@ -190,12 +201,32 @@ export async function DELETE(request: Request) {
     await ensureDbSchema();
     const db = getDb();
     if (type === "purchase") {
-      await db.delete(purchases).where(eq(purchases.id, id));
-      return Response.json({ ok: true });
+      const [deleted] = await db
+        .delete(purchases)
+        .where(eq(purchases.id, id))
+        .returning({ id: purchases.id });
+      if (!deleted) {
+        return Response.json({ error: "找不到要刪除的購買紀錄。" }, { status: 404 });
+      }
+      return Response.json({
+        ok: true,
+        deletedId: deleted.id,
+        data: await readTrackerData(db),
+      });
     }
     if (type === "injection") {
-      await db.delete(injections).where(eq(injections.id, id));
-      return Response.json({ ok: true });
+      const [deleted] = await db
+        .delete(injections)
+        .where(eq(injections.id, id))
+        .returning({ id: injections.id });
+      if (!deleted) {
+        return Response.json({ error: "找不到要刪除的施打紀錄。" }, { status: 404 });
+      }
+      return Response.json({
+        ok: true,
+        deletedId: deleted.id,
+        data: await readTrackerData(db),
+      });
     }
     return Response.json({ error: "不支援的紀錄類型。" }, { status: 400 });
   } catch (error) {
