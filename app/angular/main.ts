@@ -153,6 +153,14 @@ function autoTenths(value: string) {
   return `${normalized.slice(0, -1)}.${normalized.slice(-1)}`;
 }
 
+function caretAfterAutoTenths(position: number | null, value: string, formatted: string) {
+  if (position === null) return formatted.length;
+  const decimalIndex = formatted.indexOf(".");
+  const insertedLength = formatted.length - value.length;
+  if (decimalIndex < 0 || insertedLength <= 0 || position < decimalIndex) return position;
+  return Math.min(formatted.length, position + insertedLength);
+}
+
 function dateKey(value: Date) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(
     value.getDate()
@@ -468,7 +476,7 @@ function dateKey(value: Date) {
                   <label>
                     <span>施打毫克</span>
                     <div class="dose-input-wrap">
-                      <input type="number" min="0.01" step="0.01" inputmode="decimal" [value]="injection.doseMg" (input)="setInjection('doseMg', valueFrom($event))" placeholder="例如 2.5" required />
+                      <input type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]+)?" [value]="injection.doseMg" (input)="setTenthsInput('doseMg', $event)" placeholder="例如 2.5" required />
                       <span class="dose-unit" aria-hidden="true">mg</span>
                     </div>
                   </label>
@@ -601,7 +609,7 @@ function dateKey(value: Date) {
               <label>
                 <span>體重</span>
                 <span class="weight-input-wrap">
-                  <input type="number" min="20" max="500" step="0.1" inputmode="decimal" [value]="weight.weightKg" (input)="setWeight('weightKg', valueFrom($event))" placeholder="例如：76.5" required />
+                  <input type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]*)?" [value]="weight.weightKg" (input)="setTenthsInput('weightKg', $event)" placeholder="例如：76.5" required />
                   <span aria-hidden="true">kg</span>
                 </span>
               </label>
@@ -1130,6 +1138,29 @@ class TrackerAppComponent implements OnDestroy {
       ...this.weight,
       [field]: field === "weightKg" ? autoTenths(value) : value,
     };
+  }
+
+  setTenthsInput(field: "doseMg" | "weightKg", event: Event) {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+    const formatted = autoTenths(value);
+
+    if (field === "doseMg") this.setInjection(field, formatted);
+    else this.setWeight(field, formatted);
+
+    if (formatted === value) return;
+
+    const nextStart = caretAfterAutoTenths(selectionStart, value, formatted);
+    const nextEnd = caretAfterAutoTenths(selectionEnd, value, formatted);
+    input.value = formatted;
+
+    queueMicrotask(() => {
+      if (document.activeElement === input && input.value === formatted) {
+        input.setSelectionRange(nextStart, nextEnd);
+      }
+    });
   }
 
   async load() {

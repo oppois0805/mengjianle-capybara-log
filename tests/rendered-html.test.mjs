@@ -32,7 +32,7 @@ test("renders the finished tracker shell", async () => {
   assert.match(html, /<title>猛健樂卡皮巴拉紀錄<\/title>/);
   assert.match(html, /<mounjaro-tracker>/);
   assert.match(html, /\/mounjaro-app\.js/);
-  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260825-compact-entry-head/);
+  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260825-trailing-weight-decimal/);
   assert.match(html, /\/og\.png/);
   assert.doesNotMatch(html, /codex-preview|_sites-preview|Starter Project/);
 });
@@ -68,6 +68,10 @@ test("includes the Angular client and capybara assets", async () => {
   assert.match(source, /class="dose-input-wrap"/);
   assert.match(source, /function autoTenths/);
   assert.match(source, /field === "weightKg" \? autoTenths\(value\)/);
+  assert.match(source, /setTenthsInput\('doseMg', \$event\)/);
+  assert.match(source, /setTenthsInput\('weightKg', \$event\)/);
+  assert.match(source, /pattern="\[0-9\]\+\(\[\.\]\[0-9\]\*\)\?" \[value\]="weight\.weightKg"/);
+  assert.match(source, /input\.setSelectionRange\(nextStart, nextEnd\)/);
   assert.match(source, /formatDose\(record\.doseMg\)/);
   assert.match(source, /data\.summary\.totalPurchaseCount/);
   assert.match(source, /確認儲存/);
