@@ -29,6 +29,7 @@ export const injections = sqliteTable(
     profile: text("profile").notNull().default("wenwen"),
     injectionDate: text("injection_date").notNull(),
     injectionTime: text("injection_time").notNull().default(""),
+    doseMg: real("dose_mg"),
     location: text("location").notNull(),
     nextInjectionDate: text("next_injection_date").notNull().default(""),
     note: text("note").notNull().default(""),

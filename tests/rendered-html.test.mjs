@@ -32,7 +32,7 @@ test("renders the finished tracker shell", async () => {
   assert.match(html, /<title>猛健樂卡皮巴拉紀錄<\/title>/);
   assert.match(html, /<mounjaro-tracker>/);
   assert.match(html, /\/mounjaro-app\.js/);
-  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260822-loading-tooltip/);
+  assert.match(html, /mounjaro-app\.(?:css|js)\?v=20260825-compact-entry-head/);
   assert.match(html, /\/og\.png/);
   assert.doesNotMatch(html, /codex-preview|_sites-preview|Starter Project/);
 });
@@ -54,6 +54,21 @@ test("includes the Angular client and capybara assets", async () => {
   assert.match(source, /猛健樂紀錄/);
   assert.match(source, /下次施打/);
   assert.match(source, /總施打次數/);
+  assert.match(source, /快速新增紀錄/);
+  assert.match(source, /openEntry\('purchase'\)/);
+  assert.match(source, /openEntry\('weight'\)/);
+  assert.match(source, /<span>施打<\/span>/);
+  assert.match(source, /<span>購買<\/span>/);
+  assert.match(source, /<span>體重<\/span>/);
+  assert.match(styles, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /\.quick-entry-button\.is-purchase/);
+  assert.match(styles, /\.quick-entry-button\.is-weight/);
+  assert.match(styles, /\.entry-view \.page-head[\s\S]*?min-height: 60px/);
+  assert.match(source, /施打毫克/);
+  assert.match(source, /class="dose-input-wrap"/);
+  assert.match(source, /function autoTenths/);
+  assert.match(source, /field === "weightKg" \? autoTenths\(value\)/);
+  assert.match(source, /formatDose\(record\.doseMg\)/);
   assert.match(source, /data\.summary\.totalPurchaseCount/);
   assert.match(source, /確認儲存/);
   assert.match(source, /左上腹/);
@@ -81,5 +96,7 @@ test("includes the Angular client and capybara assets", async () => {
   assert.match(api, /export async function PATCH/);
   assert.match(api, /type === "weight"/);
   assert.match(api, /weightRecordsCount/);
+  assert.match(api, /doseMg/);
   assert.match(schema, /export const weights = sqliteTable/);
+  assert.match(schema, /doseMg: real\("dose_mg"\)/);
 });

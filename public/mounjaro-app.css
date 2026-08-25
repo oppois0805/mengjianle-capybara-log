@@ -338,6 +338,59 @@ p {
   width: 100%;
 }
 
+.quick-entry-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  gap: 8px;
+}
+
+.quick-entry-button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 56px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.quick-entry-button:hover {
+  transform: translateY(-1px);
+}
+
+.quick-entry-button.is-injection {
+  background: var(--coral);
+}
+
+.quick-entry-button.is-injection:hover {
+  background: var(--coral-dark);
+}
+
+.quick-entry-button.is-purchase {
+  background: #d18a2d;
+}
+
+.quick-entry-button.is-purchase:hover {
+  background: #b97520;
+}
+
+.quick-entry-button.is-weight {
+  background: #6f9254;
+}
+
+.quick-entry-button.is-weight:hover {
+  background: #5c7b44;
+}
+
 .secondary-action {
   border: 1px solid var(--line-strong);
   background: var(--surface);
@@ -1036,6 +1089,10 @@ td::before {
   .due-action {
     width: auto;
     min-width: 150px;
+  }
+
+  .quick-entry-actions {
+    width: 336px;
   }
 
   .stat-grid {
@@ -2064,11 +2121,11 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 
 .entry-view .page-head {
   position: relative;
-  min-height: 86px;
+  min-height: 60px;
   align-items: center;
   justify-content: center;
   margin: 0;
-  padding: 0 62px;
+  padding: 0 52px;
   border-bottom: 1px solid var(--line);
   text-align: center;
 }
@@ -2084,8 +2141,8 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   top: 50%;
   left: 8px;
   display: grid;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   place-items: center;
   border: 0;
   background: transparent;
@@ -2556,8 +2613,36 @@ select {
 }
 
 .recent-row {
-  grid-template-columns: 28px minmax(0, 1fr) auto auto 40px;
-  gap: 8px;
+  grid-template-columns: 28px minmax(76px, 1fr) auto auto 40px;
+  gap: 10px;
+}
+
+.row-date-block {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.row-date {
+  font-size: 0.9rem;
+}
+
+.row-time {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.row-dose {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-self: start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff0cf;
+  color: #ae681d;
+  font-size: 0.76rem;
+  font-weight: 800;
 }
 
 .row-date,
@@ -2610,16 +2695,10 @@ tbody tr.is-target-record {
   opacity: 0.55;
 }
 
-@media (min-width: 900px) {
-  .toast,
-  .is-entry-mode .toast {
-    top: 18px;
-    bottom: auto;
-  }
-
+@media (min-width: 520px) and (max-width: 899px) {
   .recent-table-head {
     display: grid;
-    grid-template-columns: 32px minmax(110px, 1.3fr) minmax(70px, 0.8fr) minmax(90px, 1fr) minmax(90px, 1fr);
+    grid-template-columns: 32px minmax(100px, 1.25fr) minmax(68px, 0.72fr) minmax(82px, 0.9fr) minmax(90px, 1fr);
     min-height: 42px;
     align-items: center;
     gap: 10px;
@@ -2632,7 +2711,46 @@ tbody tr.is-target-record {
   }
 
   .recent-row {
-    grid-template-columns: 32px minmax(110px, 1.3fr) minmax(70px, 0.8fr) minmax(90px, 1fr) minmax(90px, 1fr);
+    grid-template-columns: 32px minmax(100px, 1.25fr) minmax(68px, 0.72fr) minmax(82px, 0.9fr) minmax(90px, 1fr);
+  }
+
+  .row-note {
+    display: block;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .row-chevron {
+    display: none;
+  }
+}
+
+@media (min-width: 900px) {
+  .toast,
+  .is-entry-mode .toast {
+    top: 18px;
+    bottom: auto;
+  }
+
+  .recent-table-head {
+    display: grid;
+    grid-template-columns: 32px minmax(110px, 1.3fr) minmax(68px, 0.7fr) minmax(90px, 1fr) minmax(90px, 1fr);
+    min-height: 42px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+    background: #fbfaf7;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .recent-row {
+    grid-template-columns: 32px minmax(110px, 1.3fr) minmax(68px, 0.7fr) minmax(90px, 1fr) minmax(90px, 1fr);
     gap: 10px;
   }
 
@@ -2652,6 +2770,30 @@ tbody tr.is-target-record {
   .row-chevron {
     display: none;
   }
+}
+
+.dose-date-row > label {
+  align-content: start;
+}
+
+.dose-input-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.dose-input-wrap input {
+  padding-right: 50px;
+}
+
+.dose-unit {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  pointer-events: none;
 }
 
 /* Keep the weight summary aligned after the legacy stat-card rules above. */

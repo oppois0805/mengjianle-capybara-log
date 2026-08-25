@@ -34,6 +34,15 @@ async function ensureProfileColumn(
   }
 }
 
+async function ensureInjectionDoseMgColumn(d1: ReturnType<typeof getD1>) {
+  const columns = await d1
+    .prepare("PRAGMA table_info(injections)")
+    .all<{ name: string }>();
+  if (!columns.results.some((column) => column.name === "dose_mg")) {
+    await d1.prepare("ALTER TABLE injections ADD COLUMN dose_mg REAL").run();
+  }
+}
+
 export async function ensureDbSchema() {
   if (!schemaReady) {
     const d1 = getD1();
@@ -61,6 +70,7 @@ export async function ensureDbSchema() {
             profile TEXT NOT NULL DEFAULT 'wenwen',
             injection_date TEXT NOT NULL,
             injection_time TEXT NOT NULL DEFAULT '',
+            dose_mg REAL,
             location TEXT NOT NULL,
             next_injection_date TEXT NOT NULL DEFAULT '',
             note TEXT NOT NULL DEFAULT '',
@@ -95,6 +105,7 @@ export async function ensureDbSchema() {
       await ensureProfileColumn(d1, "purchases");
       await ensureProfileColumn(d1, "injections");
       await ensureProfileColumn(d1, "weights");
+      await ensureInjectionDoseMgColumn(d1);
 
       await d1.batch([
         d1.prepare(

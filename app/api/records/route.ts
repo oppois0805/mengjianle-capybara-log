@@ -58,6 +58,13 @@ function toWeight(value: unknown) {
     : -1;
 }
 
+function toDose(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.round(parsed * 100) / 100
+    : -1;
+}
+
 function routeError(error: unknown) {
   const message = error instanceof Error ? error.message : "發生未預期的錯誤";
   const detail =
@@ -197,13 +204,14 @@ export async function POST(request: Request) {
     if (type === "injection") {
       const injectionDate = toDate(payload.injectionDate);
       const injectionTime = toTime(payload.injectionTime);
+      const doseMg = toDose(payload.doseMg);
       const location = toText(payload.location);
       const nextInjectionDate =
         toDate(payload.nextInjectionDate) || addDays(injectionDate, 7);
 
-      if (!injectionDate || !locations.has(location)) {
+      if (!injectionDate || doseMg < 0 || !locations.has(location)) {
         return Response.json(
-          { error: "請確認施打日期與腹部位置。" },
+          { error: "請確認施打日期、毫克與腹部位置。" },
           { status: 400 }
         );
       }
@@ -214,6 +222,7 @@ export async function POST(request: Request) {
           profile,
           injectionDate,
           injectionTime,
+          doseMg,
           location,
           nextInjectionDate,
           note: toText(payload.note),
@@ -310,13 +319,14 @@ export async function PATCH(request: Request) {
     if (type === "injection") {
       const injectionDate = toDate(payload.injectionDate);
       const injectionTime = toTime(payload.injectionTime);
+      const doseMg = toDose(payload.doseMg);
       const location = toText(payload.location);
       const nextInjectionDate =
         toDate(payload.nextInjectionDate) || addDays(injectionDate, 7);
 
-      if (!injectionDate || !locations.has(location)) {
+      if (!injectionDate || doseMg < 0 || !locations.has(location)) {
         return Response.json(
-          { error: "請確認施打日期與施打位置。" },
+          { error: "請確認施打日期、毫克與施打位置。" },
           { status: 400 }
         );
       }
@@ -326,6 +336,7 @@ export async function PATCH(request: Request) {
         .set({
           injectionDate,
           injectionTime,
+          doseMg,
           location,
           nextInjectionDate,
           note: toText(payload.note),

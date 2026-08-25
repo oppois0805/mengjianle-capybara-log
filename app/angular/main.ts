@@ -46,6 +46,7 @@ interface InjectionRecord {
   profile: ProfileKey;
   injectionDate: string;
   injectionTime: string;
+  doseMg: number | null;
   location: LocationKey;
   nextInjectionDate: string;
   note: string;
@@ -144,6 +145,12 @@ function addDays(date: string, days: number) {
   if (Number.isNaN(value.getTime())) return "";
   value.setDate(value.getDate() + days);
   return value.toISOString().slice(0, 10);
+}
+
+function autoTenths(value: string) {
+  const normalized = value.trim();
+  if (!/^\d{3,}$/.test(normalized)) return value;
+  return `${normalized.slice(0, -1)}.${normalized.slice(-1)}`;
 }
 
 function dateKey(value: Date) {
@@ -251,9 +258,17 @@ function dateKey(value: Date) {
                 <small>{{ dueCaption }}</small>
               </div>
             </div>
-            <button class="coral-action due-action" type="button" (click)="openInjection()">
-              <span aria-hidden="true">💉</span> 記錄施打
-            </button>
+            <div class="quick-entry-actions" aria-label="快速新增紀錄">
+              <button class="quick-entry-button is-injection" type="button" (click)="openInjection()">
+                <span aria-hidden="true">💉</span><span>施打</span>
+              </button>
+              <button class="quick-entry-button is-purchase" type="button" (click)="openEntry('purchase')">
+                <span aria-hidden="true">🛍️</span><span>購買</span>
+              </button>
+              <button class="quick-entry-button is-weight" type="button" (click)="openEntry('weight')">
+                <span aria-hidden="true">⚖️</span><span>體重</span>
+              </button>
+            </div>
           </section>
 
           <section class="stat-grid" aria-label="紀錄摘要">
@@ -323,12 +338,15 @@ function dateKey(value: Date) {
 
               <div class="recent-list" *ngIf="recentInjections.length">
                 <div class="recent-table-head" aria-hidden="true">
-                  <span></span><span>日期</span><span>時間</span><span>施打部位</span><span>備註</span>
+                  <span></span><span>日期</span><span>毫克</span><span>部位</span><span>備註</span>
                 </div>
                 <article class="recent-row" *ngFor="let record of recentInjections; let first = first">
                   <span class="timeline-dot" [class.is-current]="first" aria-hidden="true">✓</span>
-                  <strong class="row-date">{{ formatDate(record.injectionDate) }}</strong>
-                  <small class="row-time">{{ record.injectionTime || '--:--' }}</small>
+                  <span class="row-date-block">
+                    <strong class="row-date">{{ formatDate(record.injectionDate) }}</strong>
+                    <small class="row-time">{{ record.injectionTime || '--:--' }}</small>
+                  </span>
+                  <span class="row-dose">{{ formatDose(record.doseMg) }}</span>
                   <span class="row-location">{{ placeLabel(record.location) }}</span>
                   <span class="row-note">{{ record.note || '—' }}</span>
                   <button
@@ -437,15 +455,24 @@ function dateKey(value: Date) {
                   </label>
                 </div>
 
-                <label>
-                  <span>下次施打日期</span>
-                  <span class="native-picker">
-                    <span class="native-picker-value" aria-hidden="true">{{ pickerDate(injection.nextInjectionDate) }}</span>
-                    <span class="native-picker-icon is-date" aria-hidden="true"></span>
-                    <input class="native-picker-input" type="date" [value]="injection.nextInjectionDate" (input)="setInjection('nextInjectionDate', valueFrom($event))" />
-                  </span>
-                  <small class="field-help">預設為施打日期後 7 天，可自行調整。</small>
-                </label>
+                <div class="field-row dose-date-row">
+                  <label>
+                    <span>下次施打日期</span>
+                    <span class="native-picker">
+                      <span class="native-picker-value" aria-hidden="true">{{ pickerDate(injection.nextInjectionDate) }}</span>
+                      <span class="native-picker-icon is-date" aria-hidden="true"></span>
+                      <input class="native-picker-input" type="date" [value]="injection.nextInjectionDate" (input)="setInjection('nextInjectionDate', valueFrom($event))" />
+                    </span>
+                    <small class="field-help">預設為施打日期後 7 天，可自行調整。</small>
+                  </label>
+                  <label>
+                    <span>施打毫克</span>
+                    <div class="dose-input-wrap">
+                      <input type="number" min="0.01" step="0.01" inputmode="decimal" [value]="injection.doseMg" (input)="setInjection('doseMg', valueFrom($event))" placeholder="例如 2.5" required />
+                      <span class="dose-unit" aria-hidden="true">mg</span>
+                    </div>
+                  </label>
+                </div>
 
                 <button class="coral-action full-action" type="button" (click)="nextInjectionStep()">下一步：選擇位置</button>
               </div>
@@ -454,6 +481,7 @@ function dateKey(value: Date) {
                 <div class="record-summary">
                   <span>{{ formatDateLong(injection.injectionDate) }}</span>
                   <span>{{ injection.injectionTime || '--:--' }}</span>
+                  <span>{{ formatDose(injection.doseMg) }}</span>
                 </div>
 
                 <fieldset class="quadrant-field">
@@ -648,7 +676,7 @@ function dateKey(value: Date) {
             <div class="table-title"><h2>施打紀錄</h2><span>{{ filteredInjections.length }} 筆</span></div>
             <p class="empty-table" *ngIf="!filteredInjections.length">目前沒有符合條件的施打紀錄。</p>
             <table *ngIf="filteredInjections.length">
-              <thead><tr><th>日期</th><th>時間</th><th>施打部位</th><th>備註</th><th><span class="sr-only">操作</span></th></tr></thead>
+              <thead><tr><th>日期</th><th>時間</th><th>毫克</th><th>施打部位</th><th>備註</th><th><span class="sr-only">操作</span></th></tr></thead>
               <tbody>
                 <tr
                   *ngFor="let record of filteredInjections"
@@ -657,6 +685,7 @@ function dateKey(value: Date) {
                 >
                   <td data-label="日期">{{ record.injectionDate }}</td>
                   <td data-label="時間">{{ record.injectionTime || '--:--' }}</td>
+                  <td data-label="毫克">{{ formatDose(record.doseMg) }}</td>
                   <td data-label="施打部位"><span class="location-badge">{{ placeLabel(record.location) }}</span></td>
                   <td data-label="備註">{{ record.note || '—' }}</td>
                   <td class="action-cell">
@@ -932,6 +961,12 @@ class TrackerAppComponent implements OnDestroy {
     return `${Number(value).toFixed(1)} kg`;
   }
 
+  formatDose(value: number | string | null | undefined) {
+    const dose = Number(value);
+    if (!value || !Number.isFinite(dose) || dose <= 0) return "—";
+    return `${new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 2 }).format(dose)} mg`;
+  }
+
   historyWeightDifference(record: WeightRecord) {
     const index = this.data.weights.findIndex((item) => item.id === record.id);
     const previous = index >= 0 ? this.data.weights[index + 1] : null;
@@ -969,12 +1004,16 @@ class TrackerAppComponent implements OnDestroy {
     this.message = "";
   }
 
-  openInjection(location?: LocationKey) {
+  openEntry(type: EntryTab) {
     this.clearEditing();
-    this.activeEntry = "injection";
+    this.activeEntry = type;
     this.injectionStep = 1;
-    if (location) this.injection = { ...this.injection, location };
     this.setView("entry");
+  }
+
+  openInjection(location?: LocationKey) {
+    if (location) this.injection = { ...this.injection, location };
+    this.openEntry("injection");
   }
 
   openEditRecord(type: EntryTab, record: EditableRecord) {
@@ -990,6 +1029,7 @@ class TrackerAppComponent implements OnDestroy {
       this.injection = {
         injectionDate: value.injectionDate,
         injectionTime: value.injectionTime,
+        doseMg: value.doseMg === null ? "" : String(value.doseMg),
         location: value.location,
         nextInjectionDate: value.nextInjectionDate,
         note: value.note,
@@ -1057,6 +1097,10 @@ class TrackerAppComponent implements OnDestroy {
       this.showMessage("請先選擇施打日期", "error");
       return;
     }
+    if (!this.injection.doseMg || Number(this.injection.doseMg) <= 0) {
+      this.showMessage("請先輸入施打毫克", "error");
+      return;
+    }
     this.message = "";
     this.injectionStep = 2;
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1067,16 +1111,25 @@ class TrackerAppComponent implements OnDestroy {
   }
 
   setInjection(field: keyof typeof this.injection, value: string) {
+    const nextValue =
+      field === "doseMg"
+        ? autoTenths(value)
+        : field === "location"
+          ? (value as LocationKey)
+          : value;
     const next = {
       ...this.injection,
-      [field]: field === "location" ? (value as LocationKey) : value,
+      [field]: nextValue,
     };
     if (field === "injectionDate") next.nextInjectionDate = addDays(value, 7);
     this.injection = next;
   }
 
   setWeight(field: keyof typeof this.weight, value: string) {
-    this.weight = { ...this.weight, [field]: value };
+    this.weight = {
+      ...this.weight,
+      [field]: field === "weightKg" ? autoTenths(value) : value,
+    };
   }
 
   async load() {
@@ -1591,6 +1644,7 @@ class TrackerAppComponent implements OnDestroy {
     return {
       injectionDate: date,
       injectionTime: currentTime(),
+      doseMg: "",
       location: (this?.suggestedLocation || "upper_left") as LocationKey,
       nextInjectionDate: addDays(date, 7),
       note: "",

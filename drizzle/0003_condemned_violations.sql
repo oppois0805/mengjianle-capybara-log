@@ -1,0 +1,1 @@
+ALTER TABLE `injections` ADD `dose_mg` real;
